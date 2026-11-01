@@ -1,5 +1,14 @@
 # sheepdog (development version)
 
+- The README figures are redrawn (`data-raw/diagram_pipeline.R`,
+  `data-raw/diagram_extraction.R`): the pipeline shows the reviewers, the
+  model selection by log-loss, the Bayesian calibration and its checks,
+  `review_support()`, `cell_status()`, `community_matrices_draws()` and the
+  occupancy branch (`export_occupancy_data()` > `occasion_draws()` >
+  crywolf); the extraction flow shows the strata of `"random_detections"`
+  and `covariate_bins()`. The README function table lists `covariate_bins()`,
+  `review_support()`, `calibration_ppc()`, `export_occupancy_data()` and
+  `occasion_draws()`.
 - The contract test reads the fixture `export-1.3` in crywolf as well (with
   crywolf >= 2.1.0.9000): `fp_draws_data()` returns the versions of
   `occasion_draws.parquet` and refuses a different seed.

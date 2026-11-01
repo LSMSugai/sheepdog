@@ -55,13 +55,16 @@ digraph extraction {
               style = "filled", fillcolor = "#f9e3ae", margin = "0.12,0.08"]
     top      [label = "\\"top\\"\nn_top highest confidence per\nsite x species x night x hour",
               fillcolor = "#f9e3ae"]
-    det      [label = "\\"random_detections\\"\nrandom occasions with a detection\n>= threshold; all their detections",
+    det      [label = "\\"random_detections\\"\nrandom occasions with a detection\n>= threshold; all their detections;\ndrawn within site x species x strata:\nnight x hour, night, hour, week, month,\nown columns or covariate_bins()",
               fillcolor = "#f9e3ae"]
     rec      [label = "\\"random_recordings\\"\nrandom recordings (or minutes)\namong all recorded",
               fillcolor = "#f9e3ae"]
     meta     [label = "target_total / max_per_species\nbalanced by species (and hour)",
               fillcolor = "#fceecf"]
   }
+
+  bins [label = "covariate_bins()\nbins of a night or occasion covariate\n(covariates =)",
+        shape = note, fillcolor = "#ffffff"]
 
   /* ---------------- CORTE ---------------- */
   subgraph cluster_corte {
@@ -94,6 +97,7 @@ digraph extraction {
   modo     -> top
   modo     -> det
   modo     -> rec
+  bins     -> det       [style = dashed]
   top      -> meta
   det      -> meta
   rec      -> simular
