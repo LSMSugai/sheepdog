@@ -40,6 +40,19 @@ Diogo confirmed that no real multispecies validation dataset is available.
   about 20 minutes per classifier with M = 20 versions on 16 cores. Writes
   the small tables the vignette reads to
   `inst/benchmarks/curiango-flow-*.csv`.
+- `curiango-mc-stability.R [DRAWS_DIR]`: choice of the number of versions
+  M of the Monte Carlo propagation. After `curiango-flow.R` with a large M
+  and `DRAWS_DIR` set (which saves the draws of each fit), it measures, for
+  each parameter and M, the Monte Carlo standard error of the pooled mean
+  and the spread of the mean and of the 95% interval bounds over random
+  subsets of the fits, as shares of the posterior standard deviation.
+  Writes `inst/benchmarks/curiango-mc-stability.csv`.
+- `curiango-fig4-mc.R FIG4_DATA [MC_SUMMARY]`: the Monte Carlo path beside
+  the threshold paths of the Curiango article (its Fig. 4, from the
+  corrected analysis with minutes as occasions). The models share the
+  occupancy covariates but not the detection model (the article has a
+  recorder random effect); the comparison is approximate. Writes the
+  figure and table to `dev/benchmarks/results/`.
 - `curiango-ppc.R [EXPORT_DIR]`: posterior predictive checks of the two
   Curiango calibrations saved by `curiango-export.R`: share of true
   positives overall, by score bin, by site and by month, with Bayesian

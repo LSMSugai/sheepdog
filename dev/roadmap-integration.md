@@ -62,6 +62,12 @@ verdadeiros e dos falsos positivos sem depender do classificador.
 
 ## Estado (27/10/2026)
 
+- 01/11/2026: **sheepdog 3.3.0 lançado** (tag `v3.3.0`), com as fases 0 e
+  1, o app local (revisão, sorteio e export) e o retreino por noite. É a
+  nova candidata ao CRAN, no lugar da 3.2.1 (nunca enviada); a submissão
+  espera o DOI do artigo do JAV resolver (NOTE de URL 404). Faltam da fase
+  1 só as duas análises "dev" (escolha de M e comparação com a Fig. 4),
+  rodando com sheepdog 3.3.0 e crywolf 2.1.0.
 - Fase 0 feita: `export_occupancy_data()` (sheepdog#36) e `fp_read_sheepdog()`
   (crywolf 1.9.0, doi:10.5281/zenodo.23624712).
 - Fase 1 feita do lado do sheepdog: os sete itens da integração (abaixo)
@@ -120,7 +126,9 @@ paliativo do lado do crywolf. Nenhum item do sheepdog depende da fase 2,
 só a fase 3.
 
 No sheepdog, a 3.2.1 vai para o CRAN como está; as fases 0, 1 e 3 entram
-como funções novas numa 3.3.0 (sem quebra).
+como funções novas numa 3.3.0 (sem quebra). Atualizado em 01/11/2026: a
+3.2.1 nunca foi enviada; a 3.3.0 (fases 0 e 1) foi lançada e é a
+candidata ao CRAN; a fase 3 entra numa versão seguinte.
 
 ## Fase 0: contrato de dados
 
