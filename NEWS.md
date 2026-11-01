@@ -1,5 +1,11 @@
 # sheepdog (development version)
 
+- `exclude_training_clips()` with a table of `training_nights()` and
+  `level = "recording"` reads `source_audio` with the pattern given to
+  `training_nights()` (kept in the attribute `"pattern"` of its table), or
+  with the new argument `pattern`, instead of always the default pattern;
+  it warns when no `source_audio` matches, instead of excluding nothing in
+  silence.
 - `build_training_set()` gains `split`: `"site"` (the previous behaviour,
   with `test_sites`), `"night"` (a proportion `test_prop` of the nights of
   each site goes to the test set, for all species together),

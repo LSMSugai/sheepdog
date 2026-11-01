@@ -271,3 +271,23 @@ test_that("exclude_training_clips() drops by recording or night", {
   expect_error(exclude_training_clips(man[c("species_code", "source_audio")],
                                       ts, level = "night"), "both need")
 })
+
+test_that("exclusion by recording reads source_audio with the pattern used", {
+  # data_hora_local: o padrao default nao le esses nomes
+  padrao <- "(?<date>\\d{8})_(?<time>\\d{6})_(?<site>[A-Z0-9]+)"
+  man <- tibble::tibble(species_code = "a",
+                        source_audio = c("20211001_200000_X9.wav",
+                                         "20211002_200000_X9.wav"))
+  tn <- training_nights("20211001_200000_X9_clip1.wav", padrao)
+  expect_identical(attr(tn, "pattern"), padrao)
+  r <- suppressMessages(exclude_training_clips(man, tn, level = "recording"))
+  expect_identical(r$source_audio, "20211002_200000_X9.wav")
+  # sem o atributo (tabela refeita), o padrao vai no argumento
+  sem <- dplyr::bind_rows(tn[0, ], tibble::as_tibble(as.list(tn)))
+  attr(sem, "pattern") <- NULL
+  expect_warning(suppressMessages(
+    exclude_training_clips(man, sem, level = "recording")), "matches")
+  r2 <- suppressMessages(exclude_training_clips(man, sem, level = "recording",
+                                                pattern = padrao))
+  expect_identical(nrow(r2), 1L)
+})
