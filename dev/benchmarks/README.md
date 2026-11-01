@@ -142,6 +142,13 @@ occupancy model estimates; a joint model (phase 2) would estimate both
 together instead of in two steps. 191 predictions fall on nights warmer
 or colder than any reviewed minute, so their P(TP) is extrapolated.
 Reading the exports of schema 1.3 needs crywolf >= 2.1.0.9000.
+With M = 90 versions (`N_VERSIONS=90`, `M=90`; R-hat <= 1.006, no
+divergences, smallest bulk ESS 1,964; about two hours with 4 workers) the
+temperature effect is -0.40 (95% interval -0.78 to -0.09), with a Monte
+Carlo error of 9.8% of the posterior SD (share_between 0.87). The mean is
+the same as with M = 20; the lower bound of -1.05 at M = 20 was Monte Carlo
+noise from a few versions. Humidity is -0.65 (-0.86 to -0.43) and moon
+0.14 (-0.01 to 0.30); every parameter is within about 10% Monte Carlo error.
 
 Times are elapsed seconds on one machine, not version-to-version speedups.
 The two rules reuse the same CV fits. Full scientific conclusions and
