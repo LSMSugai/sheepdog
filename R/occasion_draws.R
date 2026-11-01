@@ -106,7 +106,8 @@ occasion_draws <- function(export_dir, species = NULL,
       ocasioes$month <- substr(ocasioes$recording_date, 1, 6)
     }
   }
-  cal <- as.data.frame(arrow::read_parquet(parquet))
+  # sem mmap, o arquivo nao fica travado no Windows depois da leitura
+  cal <- as.data.frame(arrow::read_parquet(parquet, mmap = FALSE))
   for (ch in c("site", "species", chaves)) cal[[ch]] <- as.character(cal[[ch]])
 
   especies <- sort(unique(det$species[det$species %in% cal$species]))

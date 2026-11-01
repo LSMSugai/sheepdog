@@ -1,7 +1,7 @@
 ## Submission candidate
 
-Prepared for an initial CRAN submission of sheepdog 3.3.1, which
-replaces the 3.3.0 and 3.2.1 candidates (never uploaded).
+Prepared for an initial CRAN submission of sheepdog 3.3.2, which
+replaces the 3.3.1, 3.3.0 and 3.2.1 candidates (never uploaded).
 This file does not imply that a submission has already been uploaded.
 
 ## Test environment
@@ -19,7 +19,9 @@ This file does not imply that a submission has already been uploaded.
 0 errors | 0 warnings | 2 notes
 
 - New submission; crywolf (Suggests) is available from the
-  Additional_repositories.
+  Additional_repositories. On win-builder the same NOTE flags
+  "Detections" and "detections" in DESCRIPTION as possibly misspelled;
+  they are spelled correctly.
 - The local HTML Tidy is too old to validate the HTML manual; this NOTE
   is local only.
 
