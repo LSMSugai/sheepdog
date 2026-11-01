@@ -45,6 +45,13 @@ jobs:
         run: |
           find '${{ runner.temp }}/package' -name 'testthat.Rout*' -exec cat '{}' \; || true
         shell: bash
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/cobertura.xml
+          token: ${{ secrets.CODECOV }}
+          # um upload que falha nao derruba o job (forks nao tem o token)
+          fail_ci_if_error: false
       - uses: actions/upload-artifact@v4
         with:
           name: test-coverage
