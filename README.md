@@ -125,7 +125,7 @@ Each stage is also available as separate functions:
 | Stage | Functions |
 |---|---|
 | 1. Selecting and cutting clips | `read_selection_tables()`, `select_clips()` (a pure function that returns the clip manifest without touching audio), `covariate_bins()` (strata along a gradient), `cut_clips()`, `pack_clips()` |
-| 1. Review app | `run_app()` (local 'shiny' app: spectrogram, player and keyboard verdicts written to a CSV), `app_verdicts()` |
+| 1. Review app | `run_app()` (local 'shiny' app: draw and cut the clips, review them with spectrogram, player and keyboard verdicts written to a CSV, and export the occupancy tables), `app_verdicts()` |
 | 1. Several reviewers | `assign_reviewers()`, `split_by_reviewer()`, `reviewer_agreement()` (Cohen's or Fleiss' kappa), `consensus_verdicts()` |
 | 1. After the review | `classify_review()`, `precision_by_bin()`, `suggest_thresholds()`, `nightly_presence()`, `retraining_clips()`, `read_validation_tables()`, `review_support()` (cells, or bins, that still need review) |
 | 1. Retraining | `build_training_set()` (training folders for BirdNET-Analyzer), `exclude_training_clips()` |
