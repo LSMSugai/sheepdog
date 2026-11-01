@@ -116,6 +116,33 @@ calibration than of the data. The models differ in the detection part
 (no recorder random effect here), so these are approximate comparisons,
 not yet an ecological result.
 
+Why the temperature effect of the custom classifier shrinks (1 November
+2026). A recorder random intercept on detection does not explain it: four
+versions fitted with and without it gave -0.035 and -0.028 (sd_recorder
+0.52). The calibration does. In the 760 reviewed minutes of the custom
+classifier, P(TP) at a given score falls on warm nights (logistic
+regression with score and site: -0.37 per SD of night temperature,
+SE 0.18, likelihood-ratio p = 0.03; no score x temperature interaction);
+with BirdNET the slope is similar (-0.30) but not significant (n = 279).
+A calibration without temperature gives warm nights too high a P(TP), so
+the "sample" rule adds detections on those nights and offsets the negative
+effect of temperature on occupancy. Refitting the calibration with the
+night temperature (`CALIB_COVARIATE=temp ADAPT_DELTA=0.95
+curiango-export.R`, schema 1.3; calibration slope -0.39, 95% CI -0.72 to
+-0.07; R-hat 1.009, no divergences) and the occupancy model on 20 versions
+(`CLASSIFIERS=custom M=20 curiango-flow.R`; R-hat <= 1.004, no
+divergences) brings the temperature effect back to -0.40 (95% interval
+-1.05 to -0.12), between the MaxF1 (-0.25) and MaxPrecision (-0.50) paths.
+Humidity (-0.66) and moon (0.15) barely change. Calibration uncertainty
+now dominates the temperature coefficient (share_between 0.90), so by the
+rule above this estimate needs about 90 versions; with 20 its Monte Carlo
+error is about 21% of the posterior SD. The calibration slope on
+temperature partly reflects the same change in prevalence that the
+occupancy model estimates; a joint model (phase 2) would estimate both
+together instead of in two steps. 191 predictions fall on nights warmer
+or colder than any reviewed minute, so their P(TP) is extrapolated.
+Reading the exports of schema 1.3 needs crywolf >= 2.1.0.9000.
+
 Times are elapsed seconds on one machine, not version-to-version speedups.
 The two rules reuse the same CV fits. Full scientific conclusions and
 limitations belong in `vignettes/performance.Rmd`.
