@@ -1,25 +1,30 @@
 ## Submission candidate
 
-Prepared for an initial CRAN submission of sheepdog 3.2.1.
+Prepared for an initial CRAN submission of sheepdog 3.3.0, which
+replaces the 3.2.1 candidate (never uploaded).
 This file does not imply that a submission has already been uploaded.
 
 ## Test environment
 
 - Local macOS, aarch64-apple-darwin23, R 4.6.1.
-- R CMD check --as-cran, with all package vignettes built and rebuilt,
-  and both PDF and HTML manuals checked using HTML Tidy 5.8.0.
+- R CMD check --as-cran, with all package vignettes built and rebuilt.
+- GitHub Actions: macOS, Windows and Linux (R release) and Linux
+  (R-devel).
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | 2 notes
 
-Fast tests: 416 passed; one optional Stan integration test skipped.
-That integration test was also run separately and passed 23 checks.
+- New submission; crywolf (Suggests) is available from the
+  Additional_repositories. The same NOTE lists one URL as not found:
+  https://doi.org/10.1002/jav.03737, the DOI of an accepted article that
+  the publisher has not yet registered. **Before upload, wait for the DOI
+  to resolve or replace the link.**
+- The local HTML Tidy is too old to validate the HTML manual; this NOTE
+  is local only.
 
-GitHub Actions release-R checks on Linux, Windows and macOS passed for
-an earlier release; checks for this exact candidate on R-devel and the
-other platforms should be confirmed before upload. A Linux R-devel job
-has been added to the check workflow.
+Tests: 1498 passed; two optional tests skipped (Stan integration and a
+crywolf version check).
 
 ## Optional repositories
 
@@ -31,7 +36,7 @@ and is not run by normal CRAN checks.
 
 ## Size and benchmark material
 
-The checked source archive is approximately 3.8 MB. The acoustic example
+The checked source archive is approximately 4.4 MB. The acoustic example
 is simulated and contains no audio files. Cached performance tables are
 small derived summaries; benchmark fitting and downloads are opt-in
 scripts excluded from the source tarball. Vignette builds use the cached

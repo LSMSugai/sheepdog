@@ -192,6 +192,8 @@ test_that("sampling_args() keeps only the filled fields", {
 
 test_that("the sampling tab draws, then cuts and writes the manifest", {
   skip_if_not_installed("shiny")
+  # o corte de verdade usa o av
+  skip_if_not_installed("av")
   ex <- system.file("extdata", "example", package = "sheepdog")
   det <- suppressMessages(read_selection_tables(file.path(ex, "birdnet")))
   out <- withr::local_tempdir()

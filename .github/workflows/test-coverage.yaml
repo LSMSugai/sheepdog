@@ -31,12 +31,20 @@ jobs:
       - name: Measure coverage
         shell: Rscript {0}
         run: |
-          coverage <- covr::package_coverage()
+          coverage <- covr::package_coverage(
+            quiet = FALSE, clean = FALSE,
+            install_path = file.path(normalizePath(Sys.getenv("RUNNER_TEMP"),
+                                                   winslash = "/"), "package"))
           dir.create("coverage", showWarnings = FALSE)
           covr::to_cobertura(coverage, filename = "coverage/cobertura.xml")
           covr::report(coverage, file = "coverage/index.html", browse = FALSE)
           writeLines(sprintf("Test coverage: %.2f%%", covr::percent_coverage(coverage)),
                      Sys.getenv("GITHUB_STEP_SUMMARY"))
+      - name: Show testthat output
+        if: always()
+        run: |
+          find '${{ runner.temp }}/package' -name 'testthat.Rout*' -exec cat '{}' \; || true
+        shell: bash
       - uses: actions/upload-artifact@v4
         with:
           name: test-coverage

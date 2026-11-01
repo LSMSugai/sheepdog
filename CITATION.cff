@@ -15,9 +15,9 @@ authors:
     given-names: "Liliana"
     affiliation: "Universidade Federal de Mato Grosso do Sul"
     orcid: "https://orcid.org/0000-0001-6324-1723"
-version: "3.2.1"
+version: "3.3.0"
 doi: "10.5281/zenodo.22696210"
-date-released: "2026-10-22"
+date-released: "2026-11-01"
 url: "https://provetelab.org/sheepdog/"
 repository-code: "https://github.com/diogoprov/sheepdog"
 license: MIT
