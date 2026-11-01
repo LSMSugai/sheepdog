@@ -39,6 +39,7 @@ reference:
       - read_validation_tables
       - build_training_set
       - exclude_training_clips
+      - training_nights
   - title: Stage 1 - Several reviewers
     desc: Split the clips among reviewers, measure their agreement and combine their verdicts.
     contents:
