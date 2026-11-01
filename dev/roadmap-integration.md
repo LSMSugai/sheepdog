@@ -388,7 +388,10 @@ O app é uma camada fina sobre as funções que já existem: nenhuma lógica
 nova entra nele, e o que ele grava é o mesmo que as funções gravam (o CSV
 de veredictos, o export). `shiny` entra em Suggests.
 
-1. **Revisão** (o maior ganho e o maior trabalho). Espectrograma e player
+1. **Revisão** (o maior ganho e o maior trabalho). **Feito em
+   01/11/2026:** `run_app()` e `app_verdicts()`, com o artigo
+   "Reviewing clips in the sheepdog app" (a vinheta usa o app do pacote,
+   decidido pelo Diogo). Espectrograma e player
    HTML5 de cada clipe, com botões positivo/negativo/incerto que gravam o
    CSV de veredictos que `read_validations()` lê, no lugar de separar os
    clipes em pastas. Fila por revisor a partir de `assign_reviewers()`;
@@ -403,9 +406,8 @@ de veredictos, o export). `shiny` entra em Suggests.
 
 Entregas: `run_app()` (ou um nome melhor), a vinheta e testes dos módulos
 com `shiny::testServer()`. Esforço: M, em três ou quatro PRs, na ordem
-acima; entra numa versão menor (sem quebra). **[decidir]** Se a vinheta
-monta o app passo a passo a partir das funções (o usuário adapta o código)
-ou só mostra como abrir e usar o app que vem no pacote.
+acima; entra numa versão menor (sem quebra). Decidido em 01/11/2026: a
+vinheta mostra como abrir e usar o app que vem no pacote.
 
 ## Benchmark e dados
 

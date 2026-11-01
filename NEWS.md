@@ -1,5 +1,15 @@
 # sheepdog (development version)
 
+- New `run_app()`: a local 'shiny' app to review the clips one at a time,
+  with spectrogram, player, the data of each clip and keyboard shortcuts
+  (`p`, `n`, `u`, arrows); `max_freq` limits the spectrogram band. Each
+  verdict (`"positive"`, `"negative"` or
+  `"uncertain"`) is appended at once to a CSV file, so an interrupted review
+  resumes where it stopped; with a manifest from `assign_reviewers()`, each
+  reviewer sees only their clips. New `app_verdicts()` turns that file into
+  the table of `classify_review()`, so the rest of stage 1, the agreement
+  between reviewers and the calibration work unchanged. New article
+  "Reviewing clips in the sheepdog app". 'shiny' joins Suggests.
 - `exclude_training_clips()` with a table of `training_nights()` and
   `level = "recording"` reads `source_audio` with the pattern given to
   `training_nights()` (kept in the attribute `"pattern"` of its table), or
