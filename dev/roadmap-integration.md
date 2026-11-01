@@ -85,8 +85,10 @@ verdadeiros e dos falsos positivos sem depender do classificador.
   *M* = 20, o efeito volta a −0,40 (−1,05 a −0,12), entre MaxF1 e
   MaxPrecision. Recomendação: a calibração deve incluir as covariáveis de
   ocupação que mudam a prevalência. É o argumento empírico para a fase 2,
-  que estima as duas coisas juntas. O share_between da temperatura é 0,90,
-  então a estimativa definitiva pede *M* ≈ 90.
+  que estima as duas coisas juntas. Com *M* = 90 (90 ajustes convergidos,
+  erro de Monte Carlo de 9,8% do DP posterior), a temperatura fica em
+  −0,40 (−0,78 a −0,09): a mesma média de *M* = 20, com o intervalo
+  estável.
 - Fase 0 feita: `export_occupancy_data()` (sheepdog#36) e `fp_read_sheepdog()`
   (crywolf 1.9.0, doi:10.5281/zenodo.23624712).
 - Fase 1 feita do lado do sheepdog: os sete itens da integração (abaixo)
