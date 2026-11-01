@@ -65,9 +65,18 @@ verdadeiros e dos falsos positivos sem depender do classificador.
 - 01/11/2026: **sheepdog 3.3.0 lançado** (tag `v3.3.0`), com as fases 0 e
   1, o app local (revisão, sorteio e export) e o retreino por noite. É a
   nova candidata ao CRAN, no lugar da 3.2.1 (nunca enviada); a submissão
-  espera o DOI do artigo do JAV resolver (NOTE de URL 404). Faltam da fase
-  1 só as duas análises "dev" (escolha de M e comparação com a Fig. 4),
-  rodando com sheepdog 3.3.0 e crywolf 2.1.0.
+  espera o DOI do artigo do JAV resolver (NOTE de URL 404).
+- 01/11/2026: **fase 1 completa.** As duas análises "dev" rodaram no
+  Curiango com *M* = 50 (100 ajustes convergidos). Regra de *M*: o erro de
+  Monte Carlo da média é sqrt(share_between / *M*) do DP posterior, então
+  *M* = 100 × maior share_between (de um piloto com *M* = 20) o mantém
+  abaixo de 10%. Ocupação: *M* = 20 com o BirdNET, ~76 com o classificador
+  próprio. Fig. 4: com o BirdNET o caminho MC repete o MaxF1; com o
+  próprio, o efeito da temperatura cai para −0,06 (−0,24 a 0,11), e a
+  incerteza da calibração domina (share_between 0,49–0,97). A hipótese de
+  que os classificadores convergem sem limiar não se confirmou para a
+  temperatura; a comparação é aproximada (sem efeito aleatório do gravador
+  na detecção). Detalhes em `dev/benchmarks/README.md`.
 - Fase 0 feita: `export_occupancy_data()` (sheepdog#36) e `fp_read_sheepdog()`
   (crywolf 1.9.0, doi:10.5281/zenodo.23624712).
 - Fase 1 feita do lado do sheepdog: os sete itens da integração (abaixo)
@@ -195,8 +204,8 @@ ecológico, o que por si só responde a uma pergunta do artigo do Curiango.
 |---|---|---|
 | `calibration_draws.csv` no contrato | sheepdog | escrito por `export_occupancy_data(fit = )` |
 | `fp_occu_mc(data_list, ...)`: ajusta em paralelo e empilha os draws (mistura igual das posteriores) | crywolf | com *M* = 1 e calibração degenerada, igual ao `fp_occu()`; `summary()` separa a variância entre e dentro dos ajustes |
-| Escolha de *M*: medir a estabilidade dos coeficientes de ocupação com *M* = 10, 20, 50 | dev | regra prática documentada |
-| Curiango: comparar com os quatro caminhos do artigo | dev | figura no estilo da Fig. 4 do artigo, com o caminho MC |
+| Escolha de *M*: medir a estabilidade dos coeficientes de ocupação com *M* = 10, 20, 50 | dev | feito (01/11/2026): *M* = 100 × maior share_between |
+| Curiango: comparar com os quatro caminhos do artigo | dev | feito (01/11/2026): `curiango-fig4-mc.R` |
 
 Risco: custo *M* vezes o de um ajuste. O caminho rápido (GLM por sítio) do
 crywolf ajuda; medir antes de documentar.

@@ -4,6 +4,10 @@
   versions M of the Monte Carlo propagation) and `curiango-fig4-mc.R` (the
   Monte Carlo path beside the threshold paths of the Curiango article);
   `curiango-flow.R` can save the draws of each fit (`DRAWS_DIR`).
+- `inst/benchmarks/curiango-mc-stability.csv`: stability of the pooled
+  Monte Carlo summaries of the Curiango by number of versions (M = 2-50).
+  Rule of thumb, from a pilot run: M = 100 x the largest between-fit share
+  of the variance keeps the Monte Carlo error under 10% of the posterior SD.
 
 # sheepdog 3.3.0
 

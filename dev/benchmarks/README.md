@@ -82,6 +82,40 @@ windows, not latent occupancy. Five-fold selection evaluates known sites,
 not transfer to unseen sites. The generator is a controlled logistic
 stress test, not a fitted model of the real FrogNet community.
 
+### Monte Carlo propagation on the Curiango (1 November 2026)
+
+`curiango-flow.R` with M = 50 versions per classifier and 1,000 warm-up
+and 1,000 sampling iterations (sheepdog 3.3.0, crywolf 2.1.0; about
+50 minutes per classifier with 4 workers). All 100 fits converged
+(R-hat <= 1.01, no divergent transitions).
+
+Choice of M (`inst/benchmarks/curiango-mc-stability.csv`). The Monte
+Carlo standard error of a pooled mean is sd_between / sqrt(M), so its
+share of the posterior standard deviation is sqrt(share_between / M),
+with share_between the share of the pooled variance that lies between
+fits (reported by `summary()` of `crywolf::fp_occu_mc()`). Keeping that
+error below 10% of the posterior SD requires M >= 100 x share_between.
+In practice: run a pilot with M = 20, read the largest share_between of
+the parameters of interest, and set M = 100 x that share. On the
+Curiango, the occupancy coefficients need M = 20 with BirdNET (largest
+share 0.20) and about 76 with the custom classifier (0.76); all
+parameters need about 60 and 97. The spread over random subsets of the
+fits is smaller than the analytic error because the subsets are drawn
+without replacement from the same 50 fits (finite-population
+correction); use the analytic error.
+
+Comparison with Fig. 4 of the article (`curiango-fig4-mc.R`). With
+BirdNET the Monte Carlo path reproduces the MaxF1 path (temperature
+-0.32 vs -0.31, humidity -0.57 vs -0.56, moon 0.09 vs 0.09). With the
+custom classifier it agrees on humidity and moon but the temperature
+effect shrinks to -0.06 (95% interval -0.24 to 0.11), against -0.25 under
+MaxF1 and -0.50 under MaxPrecision. Calibration uncertainty dominates
+the custom classifier (share_between 0.49-0.97; false-positive rate 0.044
+against 0.014 with BirdNET), so its estimates carry more of the
+calibration than of the data. The models differ in the detection part
+(no recorder random effect here), so these are approximate comparisons,
+not yet an ecological result.
+
 Times are elapsed seconds on one machine, not version-to-version speedups.
 The two rules reuse the same CV fits. Full scientific conclusions and
 limitations belong in `vignettes/performance.Rmd`.

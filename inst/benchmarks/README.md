@@ -22,6 +22,13 @@ the share of minutes with a detection in each of 20 versions drawn by
 `occasion_draws()`, and the pooled summaries and per-fit convergence of
 `crywolf::fp_occu_mc()` (constant false-positive rate).
 
+`curiango-mc-stability.csv` comes from `dev/benchmarks/curiango-mc-stability.R`
+on the draws of a run of `curiango-flow.R` with 50 versions per
+classifier: for each parameter and number of versions M, the Monte Carlo
+standard error of the pooled mean and the spread of the mean and of the
+95% bounds over random subsets of the fits, as shares of the posterior
+standard deviation.
+
 The multispecies results are SIMULATED. There was no real multispecies
 validation dataset available. There are 20 independent seeds per scenario
 (2026–2045), six sites and eight species, 24 training nights and 12
