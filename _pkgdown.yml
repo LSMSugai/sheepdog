@@ -40,6 +40,11 @@ reference:
       - build_training_set
       - exclude_training_clips
       - training_nights
+  - title: Stage 1 - Review app
+    desc: Review the clips in a local app and read its verdicts.
+    contents:
+      - run_app
+      - app_verdicts
   - title: Stage 1 - Several reviewers
     desc: Split the clips among reviewers, measure their agreement and combine their verdicts.
     contents:
@@ -96,6 +101,7 @@ articles:
     contents:
       - sampling-designs
       - articles/reviewing-in-the-gui
+      - articles/review-app
       - validation-effort
       - calibration
       - bayesian-calibration
