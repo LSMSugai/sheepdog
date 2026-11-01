@@ -1,3 +1,11 @@
+# sheepdog 3.3.2
+
+Submission candidate for CRAN, replacing 3.3.1 (never uploaded).
+
+- `occasion_draws()` reads `calibration_draws.parquet` without memory
+  mapping, so the file is no longer locked on Windows after the call (it
+  could not be removed or replaced, and a test failed on win-builder).
+
 # sheepdog 3.3.1
 
 Submission candidate for CRAN, replacing 3.3.0 (never uploaded). The
