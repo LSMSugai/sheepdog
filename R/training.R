@@ -398,11 +398,14 @@ training_nights <- function(files,
   p <- p[p$ok, ]
   data <- as.Date(p$date, format = "%Y%m%d")
   hora <- as.integer(substr(p$time, 1, 2))
-  tibble(file = files[p$ok_index],
-         site = rename_site(p$site, site_map),
-         recording = p$recording,
-         night = format(if_else(hora < night_cutoff, data - 1, data),
-                        "%Y%m%d"))
+  out <- tibble(file = files[p$ok_index],
+                site = rename_site(p$site, site_map),
+                recording = p$recording,
+                night = format(if_else(hora < night_cutoff, data - 1, data),
+                               "%Y%m%d"))
+  # o padrao acompanha a tabela, para exclude_training_clips()
+  attr(out, "pattern") <- pattern
+  out
 }
 
 recording_pattern <- paste0("(?<site>[A-Za-z]+)[A-Za-z0-9]*",
@@ -447,9 +450,10 @@ recording_parts <- function(files, pattern = recording_pattern) {
 #' With `any_species = FALSE`, only clips of the same species are dropped;
 #' with `TRUE`, a recording or night used to train one species is
 #' left out for all of them. A table of [training_nights()] has no species,
-#' clip times or `source_audio`: it takes `level = "recording"` (matched on
-#' the site, date and time read from `source_audio` with the default
-#' pattern of [training_nights()]) or `"night"`, always for any species.
+#' clip times or `source_audio`: it takes `level = "recording"` or
+#' `"night"`, always for any species. With `"recording"`, the site, date
+#' and time are read from `source_audio` of the manifest with `pattern`,
+#' which should be the one given to [training_nights()].
 #'
 #' @param manifest Clip manifest, as returned by [select_clips()] or read
 #'   from `clip_manifest.csv`.
@@ -457,12 +461,17 @@ recording_parts <- function(files, pattern = recording_pattern) {
 #'   [training_nights()], or the path to a `training_set.csv`.
 #' @param level What a training clip excludes; see Levels.
 #' @param any_species Exclude across species?
+#' @param pattern With a table of [training_nights()] and
+#'   `level = "recording"`, the regular expression that reads the
+#'   recordings from `source_audio`. By default, the one recorded in the
+#'   table by [training_nights()] (lost if the table was rebuilt, e.g. by
+#'   [dplyr::bind_rows()]), else the default of [training_nights()].
 #'
 #' @return The manifest without the excluded clips.
 #' @export
 exclude_training_clips <- function(manifest, training_set,
                                    level = c("clip", "recording", "night"),
-                                   any_species = FALSE) {
+                                   any_species = FALSE, pattern = NULL) {
   level <- match.arg(level)
   if (is.character(training_set)) {
     training_set <- read_csv(training_set, show_col_types = FALSE)
@@ -500,7 +509,17 @@ exclude_training_clips <- function(manifest, training_set,
     treino <- distinct(training_set, .rec = recording)
     chave <- ".rec"
     alvo <- manifest
-    alvo$.rec <- recording_parts(manifest$source_audio)$recording
+    if (is.null(pattern)) {
+      pattern <- attr(training_set, "pattern")
+      if (is.null(pattern)) pattern <- recording_pattern
+    }
+    alvo$.rec <- recording_parts(manifest$source_audio, pattern)$recording
+    if (all(is.na(alvo$.rec))) {
+      warning("No `source_audio` of the manifest matches `pattern`; ",
+              "nothing excluded. Give the pattern used in ",
+              "training_nights().", call. = FALSE)
+      return(manifest)
+    }
   } else {
     treino <- training_set |>
       filter(!is.na(source_audio), !is.na(clip_start)) |>

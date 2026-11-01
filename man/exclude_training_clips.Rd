@@ -8,7 +8,8 @@ exclude_training_clips(
   manifest,
   training_set,
   level = c("clip", "recording", "night"),
-  any_species = FALSE
+  any_species = FALSE,
+  pattern = NULL
 )
 }
 \arguments{
@@ -21,6 +22,12 @@ from \code{clip_manifest.csv}.}
 \item{level}{What a training clip excludes; see Levels.}
 
 \item{any_species}{Exclude across species?}
+
+\item{pattern}{With a table of \code{\link[=training_nights]{training_nights()}} and
+\code{level = "recording"}, the regular expression that reads the
+recordings from \code{source_audio}. By default, the one recorded in the
+table by \code{\link[=training_nights]{training_nights()}} (lost if the table was rebuilt, e.g. by
+\code{\link[dplyr:bind_rows]{dplyr::bind_rows()}}), else the default of \code{\link[=training_nights]{training_nights()}}.}
 }
 \value{
 The manifest without the excluded clips.
@@ -44,8 +51,9 @@ recording.
 With \code{any_species = FALSE}, only clips of the same species are dropped;
 with \code{TRUE}, a recording or night used to train one species is
 left out for all of them. A table of \code{\link[=training_nights]{training_nights()}} has no species,
-clip times or \code{source_audio}: it takes \code{level = "recording"} (matched on
-the site, date and time read from \code{source_audio} with the default
-pattern of \code{\link[=training_nights]{training_nights()}}) or \code{"night"}, always for any species.
+clip times or \code{source_audio}: it takes \code{level = "recording"} or
+\code{"night"}, always for any species. With \code{"recording"}, the site, date
+and time are read from \code{source_audio} of the manifest with \code{pattern},
+which should be the one given to \code{\link[=training_nights]{training_nights()}}.
 }
 
