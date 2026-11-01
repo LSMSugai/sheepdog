@@ -23,6 +23,10 @@
 #   curiango-flow-summary.csv  pooled posterior summaries (fp_occu_mc);
 #   curiango-flow-fits.csv     convergence of each fit;
 #   curiango-flow-session.txt  sessionInfo().
+# With DRAWS_DIR set, the pooled draws of the parameters (4 chains per fit,
+# in the order of the kept fits) and the diagnostics of the fits are also
+# saved there, as <classifier>-draws.rds and <classifier>-diagnostics.rds,
+# for curiango-mc-stability.R.
 args <- commandArgs(trailingOnly = TRUE)
 export <- if (length(args)) args[1] else "dev/benchmarks/results/curiango-export"
 M <- as.integer(Sys.getenv("M", "20"))
@@ -33,6 +37,7 @@ devtools::load_all(".", quiet = TRUE)
 stopifnot(utils::packageVersion("crywolf") >= "2.0.0.9000")
 suppressPackageStartupMessages(library(dplyr))
 out <- Sys.getenv("OUT", "inst/benchmarks")
+draws_dir <- Sys.getenv("DRAWS_DIR", "")
 dir.create(out, showWarnings = FALSE, recursive = TRUE)
 
 zs <- function(v) as.numeric(scale(v))
@@ -84,6 +89,13 @@ for (cl in c("custom", "birdnet")) {
   fits[[cl]] <- mc$diagnostics |> mutate(classifier = cl, .before = 1,
                                          minutes_total = minutes)
   print(summary(mc))
+  if (nzchar(draws_dir)) {
+    dir.create(draws_dir, showWarnings = FALSE, recursive = TRUE)
+    saveRDS(posterior::subset_draws(mc$draws,
+                                    variable = summaries[[cl]]$variable),
+            file.path(draws_dir, paste0(cl, "-draws.rds")))
+    saveRDS(mc$diagnostics, file.path(draws_dir, paste0(cl, "-diagnostics.rds")))
+  }
 }
 
 wr <- function(x, f) readr::write_csv(bind_rows(x), file.path(out, f), na = "")
