@@ -220,6 +220,90 @@ test_that("max_per_site_species caps training positives across nights", {
   expect_true(all(startsWith(ts$from, "/mnt/revisado/")))
 })
 
+test_that("val_prop draws validation nights after the test set and the cap", {
+  val <- treino_sintetico()
+  d <- withr::local_tempdir()
+  guarda <- tibble::tibble(site = "A", night = sprintf("202110%02d", 1:6))
+  q <- function(...) suppressMessages(build_training_set(
+    val, d, split = "night", max_per_site_species = 12, copy = FALSE,
+    min_files = 0, exclude_from_test = guarda, ...))
+  ts <- q(val_prop = 0.25)
+  noites <- dplyr::distinct(ts, site, night, set)
+  # cada noite num conjunto so; teste e treino como sem validacao
+  expect_identical(nrow(dplyr::distinct(noites, site, night)), nrow(noites))
+  sem <- q()
+  expect_identical(ts$set == "test", sem$set == "test")
+  expect_identical(ts$clip_file, sem$clip_file)
+  # B: 8 noites de treino, ceiling(8 * 0.25) = 2 de validacao; A: so as
+  # noites fora da guarda e do teste
+  n_val <- dplyr::count(dplyr::filter(noites, set == "val"), site)
+  expect_identical(n_val$n, c(1L, 2L))
+  expect_false(any(ts$night[ts$set == "val" & ts$site == "A"] %in%
+                     guarda$night))
+  ck <- attr(ts, "checks")
+  expect_named(ck, c("test_nights_in_train", "test_nights_excluded",
+                     "test_clips_overlapping_train", "val_nights_in_train",
+                     "val_nights_excluded"))
+  expect_true(all(ck == 0))
+  expect_named(attr(sem, "checks"), names(ck)[1:3])
+  expect_true(all(startsWith(ts$to[ts$set == "val"], file.path(d, "val"))))
+  # igual a uma segunda chamada sobre as linhas de treino, com seed + 1
+  treino <- dplyr::filter(sem, set == "train") |>
+    dplyr::mutate(reviewed_path = from)
+  div <- suppressMessages(build_training_set(
+    treino, d, split = "night", test_prop = 0.25, seed = 2027,
+    exclude_from_test = guarda, copy = FALSE, min_files = 0))
+  noites_val <- dplyr::distinct(dplyr::filter(div, set == "test"), site,
+                                night)
+  expect_equal(dplyr::arrange(noites_val, site, night),
+               dplyr::arrange(dplyr::distinct(dplyr::filter(
+                 ts, set == "val"), site, night), site, night),
+               ignore_attr = TRUE)
+  expect_false(identical(q(val_prop = 0.25, val_seed = 1)$set, ts$set))
+  expect_error(q(val_prop = 1), "between 0 and 1")
+  expect_error(build_training_set(dplyr::select(val, -night), d,
+                                  val_prop = 0.2, copy = FALSE),
+               "lacks the column `night`")
+})
+
+test_that("negatives_folder puts every negative in a non-event folder", {
+  d <- withr::local_tempdir()
+  rev <- revisao_simulada(d)
+  out <- file.path(d, "training")
+  ts <- suppressWarnings(suppressMessages(build_training_set(
+    rev, out, test_sites = "NHE", negatives_folder = "Noise")))
+  neg <- ts[ts$verdict == "negative", ]
+  expect_true(all(neg$class_folder == "Noise"))
+  expect_false(any(startsWith(ts$class_folder, "-")))
+  pastas <- list.dirs(file.path(out, "train"), recursive = FALSE,
+                      full.names = FALSE)
+  expect_true("Noise" %in% pastas)
+  # o arquivo leva especie e local; o clip_file da tabela nao muda
+  esperado <- paste(sub("^.*_", "", neg$species_code), neg$site,
+                    neg$clip_file, sep = "-")
+  expect_identical(basename(neg$to), esperado)
+  expect_true(all(file.exists(neg$to)))
+  expect_identical(anyDuplicated(ts$to), 0L)
+  # mesma divisao e mesma exclusao que com as pastas "-classe"
+  ts0 <- suppressWarnings(suppressMessages(build_training_set(
+    rev, file.path(d, "t0"), test_sites = "NHE", copy = FALSE)))
+  expect_identical(ts$set, ts0$set)
+  man <- suppressMessages(read_validation_tables(list.files(
+    system.file("extdata", "example", "validation", package = "sheepdog"),
+    full.names = TRUE)))
+  expect_identical(
+    suppressMessages(exclude_training_clips(man, ts))$clip_file,
+    suppressMessages(exclude_training_clips(man, ts0))$clip_file)
+  # qualquer caixa das classes sem evento; outro nome e erro
+  ts_s <- suppressWarnings(suppressMessages(build_training_set(
+    rev, file.path(d, "t1"), test_sites = "NHE", copy = FALSE,
+    negatives_folder = "silence")))
+  expect_true(all(ts_s$class_folder[ts_s$verdict == "negative"] ==
+                    "silence"))
+  expect_error(build_training_set(rev, out, negatives_folder = "Negatives"),
+               "non-event class")
+})
+
 test_that("training_nights() reads site, recording and night from names", {
   d <- withr::local_tempdir()
   dir.create(file.path(d, "classe", "sub"), recursive = TRUE)

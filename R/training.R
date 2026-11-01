@@ -29,9 +29,10 @@ read_validation_tables <- function(files) {
 #' into the folder layout that the training script of BirdNET-Analyzer
 #' expects: one folder per class, named after the label (`species_code`, so
 #' the retrained classifier keeps the labels of the current one), with the
-#' negatives of a class in a folder with the same name prefixed by `-`. The
-#' test clips go to a separate `test` folder, to be passed as
-#' `--test_data`.
+#' negatives of a class in a folder with the same name prefixed by `-` (or
+#' all negatives in one non-event folder; see Negatives). The test clips go
+#' to a separate `test` folder; with `val_prop`, a validation set by night
+#' goes to `val`, to be passed as `--test_data` (see Splits).
 #'
 #' The layout follows the documentation of BirdNET-Analyzer (version
 #' 2.4.0, `birdnet_analyzer.train`), which also recommends at least 100
@@ -60,18 +61,49 @@ read_validation_tables <- function(files) {
 #'   training sets, and warns.
 #' * `"none"`: every clip goes to the training set.
 #'
-#' The draws use `seed` (and `seed + 1` for `max_per_site_species`) and
-#' leave the global random number generator as it was. They follow the
+#' With `val_prop`, a validation set is drawn after the test set and after
+#' `max_per_site_species`, among the nights left in the training set: in
+#' each site, `ceiling(n * val_prop)` of its `n` training nights, never
+#' from `exclude_from_test`. Its clips go to `val/`. BirdNET-Analyzer draws
+#' its own validation set by file, which leaks nights, and its autotune
+#' chooses the hyperparameters on it; pass `val/` as `--test_data` so that
+#' the validation is by night, and keep `test/` for the final evaluation.
+#' The result is the same as a second call of `build_training_set()` with
+#' `split = "night"`, `test_prop = val_prop` and `seed = val_seed` on the
+#' training rows of the first.
+#'
+#' The draws use `seed` (`seed + 1` for `max_per_site_species`, and
+#' `val_seed` for the validation set) and leave the global random number
+#' generator as it was. They follow the
 #' order of the rows of `validation`: the same clips in another order give
 #' another split.
 #'
+#' @section Negatives:
+#' BirdNET-Analyzer (version 2.4.0 and its main branch of October 2026)
+#' gives the label -1 to the clips of `-<species_code>` folders. That label
+#' enters the loss functions unchanged, which makes the loss of those clips
+#' negative and unbounded; `keras.metrics.AUC` does not count -1 as a
+#' negative, which inflates the validation AUPRC whenever the validation
+#' set holds such clips; and the internal random split puts all of them in
+#' the training set. Clips of the non-event folders (`"Noise"`, `"Other"`,
+#' `"Background"`, `"Silence"`, in any case) get the label 0 and do not
+#' have these problems (reported in
+#' <https://github.com/birdnet-team/BirdNET-Analyzer/issues/1033>). Until
+#' it is fixed, use `negatives_folder = "Noise"`: every negative goes to
+#' that folder, as `<species>-<site>-<clip_file>` (the short species code
+#' after the last `_` of `species_code`), so that the file keeps its origin
+#' and clips of different species do not collide. The negatives then train
+#' the classifier against all classes, not only their own.
+#'
 #' @section Checks:
-#' At the end, three counts are reported, and kept in the attribute
+#' At the end, the counts are reported, and kept in the attribute
 #' `"checks"` of the result: test nights (site x night) that also have
 #' training clips, test nights listed in `exclude_from_test`, and test
 #' clips that overlap a training clip of the same species in the same
-#' recording. All should be 0 with `split = "night"`. With
-#' `strict = TRUE`, any count above 0 is an error.
+#' recording; with `val_prop`, also validation nights with training clips
+#' and validation nights listed in `exclude_from_test`. All should be 0
+#' with `split = "night"`. With `strict = TRUE`, any count above 0 is an
+#' error.
 #'
 #' @param validation Reviewed clips, as returned by [classify_review()],
 #'   [post_validation()] (`$validation`) or [read_validation_tables()]. It
@@ -94,10 +126,18 @@ read_validation_tables <- function(files) {
 #' @param exclude_from_test Optional table with `site` and `night` (e.g.
 #'   from [training_nights()]): nights that must not be in the test set,
 #'   such as nights whose recordings trained another classifier that will
-#'   be compared on it. They are left out of the draw and stay in the
-#'   training set.
-#' @param negatives Include the negative clips, in `-<species_code>`
-#'   folders.
+#'   be compared on it. They are left out of the draws of the test and
+#'   validation sets and stay in the training set.
+#' @param val_prop Optional proportion of the training nights of each site
+#'   drawn for the validation set (`val/`); see Splits. `NULL` draws none.
+#' @param val_seed Seed of the validation draw. The default, `seed + 1`, is
+#'   also the seed of `max_per_site_species`; the two draws are separate,
+#'   and the default reproduces the training sets of the FrogNet project.
+#' @param negatives Include the negative clips?
+#' @param negatives_folder `NULL` puts the negatives of each class in a
+#'   `-<species_code>` folder. A non-event class of BirdNET-Analyzer
+#'   (`"Noise"`, `"Other"`, `"Background"` or `"Silence"`) puts all of them
+#'   in that folder instead; see Negatives.
 #' @param min_files Minimum number of positive training files per class
 #'   below which a warning is raised.
 #' @param copy Copy the clips? With `FALSE`, only `training_set.csv` is
@@ -108,7 +148,8 @@ read_validation_tables <- function(files) {
 #' @param strict Raise an error if any check is above 0?
 #'
 #' @return A tibble with one row per clip: `site`, `species_code`,
-#'   `verdict`, `set` (`"train"` or `"test"`), `class_folder`, `clip_file`,
+#'   `verdict`, `set` (`"train"`, `"val"` or `"test"`), `class_folder`,
+#'   `clip_file`,
 #'   `source_audio`, `clip_start`, `clip_end`, `from`, `to` and `night`,
 #'   invisibly, with the checks in the attribute `"checks"`. With
 #'   `copy = TRUE`, clips that could not be copied are left out.
@@ -120,8 +161,9 @@ build_training_set <- function(validation, output_dir,
                                          "site_species_night", "none"),
                                test_sites = NULL, test_prop = 0.2,
                                seed = 2026, max_per_site_species = NULL,
-                               exclude_from_test = NULL, negatives = TRUE,
-                               min_files = 100, copy = TRUE,
+                               exclude_from_test = NULL, val_prop = NULL,
+                               val_seed = seed + 1, negatives = TRUE,
+                               negatives_folder = NULL, min_files = 100, copy = TRUE,
                                remap_from = NULL, remap_to = NULL,
                                strict = FALSE) {
   split <- match.arg(split)
@@ -142,6 +184,27 @@ build_training_set <- function(validation, output_dir,
   }
   if (!is.numeric(seed) || length(seed) != 1 || is.na(seed)) {
     stop("`seed` must be a number.", call. = FALSE)
+  }
+  if (!is.null(val_prop)) {
+    if (!is.numeric(val_prop) || length(val_prop) != 1 || is.na(val_prop) ||
+        val_prop <= 0 || val_prop >= 1) {
+      stop("`val_prop` must be a number between 0 and 1.", call. = FALSE)
+    }
+    if (!"night" %in% names(validation)) {
+      stop("`validation` lacks the column `night`, needed by `val_prop`.",
+           call. = FALSE)
+    }
+    if (!is.numeric(val_seed) || length(val_seed) != 1 || is.na(val_seed)) {
+      stop("`val_seed` must be a number.", call. = FALSE)
+    }
+  }
+  if (!is.null(negatives_folder)) {
+    if (!is.character(negatives_folder) || length(negatives_folder) != 1 ||
+        !tolower(negatives_folder) %in% non_event_classes) {
+      stop("`negatives_folder` must be a non-event class of ",
+           "BirdNET-Analyzer: ", paste(non_event_classes, collapse = ", "),
+           " (in any case).", call. = FALSE)
+    }
   }
   if (!is.null(test_sites) && split != "site") {
     warning("`test_sites` is ignored with split = \"", split, "\".",
@@ -187,19 +250,42 @@ build_training_set <- function(validation, output_dir,
     message("At most ", max_per_site_species, " positive training clips ",
             "per site x species: ", antes, " -> ", nrow(clipes), " clips.")
   }
+  if (!is.null(val_prop)) {
+    # sobre as linhas de treino, na ordem que tem depois do teto, como uma
+    # segunda chamada da funcao
+    treino <- clipes$set == "train"
+    clipes$set[treino] <- if_else(
+      with_training_seed(val_seed, split_sets(
+        clipes[treino, ], "night", NULL, val_prop, guarda)) == "test",
+      "val", "train")
+  }
 
   if (!is.null(remap_from) && !is.null(remap_to)) {
     clipes$reviewed_path <- remap_path(clipes$reviewed_path, remap_from,
                                        remap_to)
   }
+  negativo <- clipes$verdict == "negative"
+  pasta <- if_else(negativo, paste0("-", clipes$species_code),
+                   clipes$species_code)
+  destino <- clipes$clip_file
+  if (!is.null(negatives_folder)) {
+    pasta[negativo] <- negatives_folder
+    destino[negativo] <- paste(str_extract(clipes$species_code[negativo],
+                                           "[^_]+$"),
+                               clipes$site[negativo],
+                               clipes$clip_file[negativo], sep = "-")
+  }
   copia <- clipes |>
-    transmute(site, species_code, verdict, set,
-              class_folder = paste0(if_else(verdict == "negative", "-", ""),
-                                    species_code),
+    transmute(site, species_code, verdict, set, class_folder = pasta,
               clip_file, source_audio, clip_start, clip_end,
               from = reviewed_path,
-              to = file.path(output_dir, set, class_folder, clip_file),
+              to = file.path(output_dir, set, class_folder, destino),
               night)
+  repetidos <- sum(duplicated(copia$to))
+  if (repetidos > 0) {
+    warning(repetidos, " clip(s) share a destination with another clip and ",
+            "would overwrite it.", call. = FALSE)
+  }
 
   if (copy) {
     walk(unique(dirname(copia$to)), dir.create, recursive = TRUE,
@@ -230,15 +316,16 @@ build_training_set <- function(validation, output_dir,
   message(nrow(copia), " clips ", if (copy) "copied to " else
             "listed in training_set.csv (nothing copied) in ", output_dir,
           " (", sum(copia$set == "train"), " train, ",
+          if (!is.null(val_prop)) paste0(sum(copia$set == "val"), " val, "),
           sum(copia$set == "test"), " test).")
-  checagens <- training_checks(copia, guarda)
-  if (any(copia$set == "test")) {
+  checagens <- training_checks(copia, guarda, validacao = !is.null(val_prop))
+  if (any(copia$set %in% c("test", "val"))) {
     message("Checks (all should be 0 with split = \"night\"):\n",
             paste0("  ", names(checagens), ": ", checagens,
                    collapse = "\n"))
     if (strict && any(checagens > 0)) {
-      stop("The test set is not independent of the training set (see the ",
-           "checks above).", call. = FALSE)
+      stop("The test or validation set is not independent of the ",
+           "training set (see the checks above).", call. = FALSE)
     }
   }
   attr(copia, "checks") <- checagens
@@ -329,8 +416,11 @@ cap_positives <- function(clipes, teto) {
     ungroup()
 }
 
-# Contagens de vazamento entre treino e teste
-training_checks <- function(copia, guarda) {
+# Classes sem evento do BirdNET-Analyzer (NON_EVENT_CLASSES), rotulo 0
+non_event_classes <- c("noise", "other", "background", "silence")
+
+# Contagens de vazamento entre treino e teste (e validacao)
+training_checks <- function(copia, guarda, validacao = FALSE) {
   treino <- filter(copia, set == "train")
   teste <- filter(copia, set == "test")
   noites_teste <- teste |>
@@ -342,11 +432,20 @@ training_checks <- function(copia, guarda) {
   } else {
     0L
   }
-  c(test_nights_in_train = nrow(semi_join(
+  out <- c(test_nights_in_train = nrow(semi_join(
       noites_teste, distinct(treino, site, night), by = c("site", "night"))),
     test_nights_excluded = if (is.null(guarda)) 0L else
       nrow(semi_join(noites_teste, guarda, by = c("site", "night"))),
     test_clips_overlapping_train = as.integer(sobrepostos))
+  if (!validacao) return(out)
+  noites_val <- copia |>
+    filter(set == "val", !is.na(night)) |>
+    distinct(site, night)
+  c(out,
+    val_nights_in_train = nrow(semi_join(
+      noites_val, distinct(treino, site, night), by = c("site", "night"))),
+    val_nights_excluded = if (is.null(guarda)) 0L else
+      nrow(semi_join(noites_val, guarda, by = c("site", "night"))))
 }
 
 #' Nights and recordings of clips used to train a classifier

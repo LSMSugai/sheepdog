@@ -13,7 +13,10 @@ build_training_set(
   seed = 2026,
   max_per_site_species = NULL,
   exclude_from_test = NULL,
+  val_prop = NULL,
+  val_seed = seed + 1,
   negatives = TRUE,
+  negatives_folder = NULL,
   min_files = 100,
   copy = TRUE,
   remap_from = NULL,
@@ -50,11 +53,22 @@ nights as possible. Test clips and negatives are not reduced.}
 \item{exclude_from_test}{Optional table with \code{site} and \code{night} (e.g.
 from \code{\link[=training_nights]{training_nights()}}): nights that must not be in the test set,
 such as nights whose recordings trained another classifier that will
-be compared on it. They are left out of the draw and stay in the
-training set.}
+be compared on it. They are left out of the draws of the test and
+validation sets and stay in the training set.}
 
-\item{negatives}{Include the negative clips, in \verb{-<species_code>}
-folders.}
+\item{val_prop}{Optional proportion of the training nights of each site
+drawn for the validation set (\verb{val/}); see Splits. \code{NULL} draws none.}
+
+\item{val_seed}{Seed of the validation draw. The default, \code{seed + 1}, is
+also the seed of \code{max_per_site_species}; the two draws are separate,
+and the default reproduces the training sets of the FrogNet project.}
+
+\item{negatives}{Include the negative clips?}
+
+\item{negatives_folder}{\code{NULL} puts the negatives of each class in a
+\verb{-<species_code>} folder. A non-event class of BirdNET-Analyzer
+(\code{"Noise"}, \code{"Other"}, \code{"Background"} or \code{"Silence"}) puts all of them
+in that folder instead; see Negatives.}
 
 \item{min_files}{Minimum number of positive training files per class
 below which a warning is raised.}
@@ -70,7 +84,8 @@ replacement, for clips reviewed on another computer or drive.}
 }
 \value{
 A tibble with one row per clip: \code{site}, \code{species_code},
-\code{verdict}, \code{set} (\code{"train"} or \code{"test"}), \code{class_folder}, \code{clip_file},
+\code{verdict}, \code{set} (\code{"train"}, \code{"val"} or \code{"test"}), \code{class_folder},
+\code{clip_file},
 \code{source_audio}, \code{clip_start}, \code{clip_end}, \code{from}, \code{to} and \code{night},
 invisibly, with the checks in the attribute \code{"checks"}. With
 \code{copy = TRUE}, clips that could not be copied are left out.
@@ -80,9 +95,10 @@ Splits the reviewed clips into a training and a test set and copies them
 into the folder layout that the training script of BirdNET-Analyzer
 expects: one folder per class, named after the label (\code{species_code}, so
 the retrained classifier keeps the labels of the current one), with the
-negatives of a class in a folder with the same name prefixed by \code{-}. The
-test clips go to a separate \code{test} folder, to be passed as
-\code{--test_data}.
+negatives of a class in a folder with the same name prefixed by \code{-} (or
+all negatives in one non-event folder; see Negatives). The test clips go
+to a separate \code{test} folder; with \code{val_prop}, a validation set by night
+goes to \code{val}, to be passed as \code{--test_data} (see Splits).
 }
 \details{
 The layout follows the documentation of BirdNET-Analyzer (version
@@ -115,20 +131,53 @@ training sets, and warns.
 \item \code{"none"}: every clip goes to the training set.
 }
 
-The draws use \code{seed} (and \code{seed + 1} for \code{max_per_site_species}) and
-leave the global random number generator as it was. They follow the
+With \code{val_prop}, a validation set is drawn after the test set and after
+\code{max_per_site_species}, among the nights left in the training set: in
+each site, \code{ceiling(n * val_prop)} of its \code{n} training nights, never
+from \code{exclude_from_test}. Its clips go to \verb{val/}. BirdNET-Analyzer draws
+its own validation set by file, which leaks nights, and its autotune
+chooses the hyperparameters on it; pass \verb{val/} as \code{--test_data} so that
+the validation is by night, and keep \verb{test/} for the final evaluation.
+The result is the same as a second call of \code{build_training_set()} with
+\code{split = "night"}, \code{test_prop = val_prop} and \code{seed = val_seed} on the
+training rows of the first.
+
+The draws use \code{seed} (\code{seed + 1} for \code{max_per_site_species}, and
+\code{val_seed} for the validation set) and leave the global random number
+generator as it was. They follow the
 order of the rows of \code{validation}: the same clips in another order give
 another split.
 }
 
+\section{Negatives}{
+
+BirdNET-Analyzer (version 2.4.0 and its main branch of October 2026)
+gives the label -1 to the clips of \verb{-<species_code>} folders. That label
+enters the loss functions unchanged, which makes the loss of those clips
+negative and unbounded; \code{keras.metrics.AUC} does not count -1 as a
+negative, which inflates the validation AUPRC whenever the validation
+set holds such clips; and the internal random split puts all of them in
+the training set. Clips of the non-event folders (\code{"Noise"}, \code{"Other"},
+\code{"Background"}, \code{"Silence"}, in any case) get the label 0 and do not
+have these problems (reported in
+\url{https://github.com/birdnet-team/BirdNET-Analyzer/issues/1033}). Until
+it is fixed, use \code{negatives_folder = "Noise"}: every negative goes to
+that folder, as \verb{<species>-<site>-<clip_file>} (the short species code
+after the last \verb{_} of \code{species_code}), so that the file keeps its origin
+and clips of different species do not collide. The negatives then train
+the classifier against all classes, not only their own.
+}
+
 \section{Checks}{
 
-At the end, three counts are reported, and kept in the attribute
+At the end, the counts are reported, and kept in the attribute
 \code{"checks"} of the result: test nights (site x night) that also have
 training clips, test nights listed in \code{exclude_from_test}, and test
 clips that overlap a training clip of the same species in the same
-recording. All should be 0 with \code{split = "night"}. With
-\code{strict = TRUE}, any count above 0 is an error.
+recording; with \code{val_prop}, also validation nights with training clips
+and validation nights listed in \code{exclude_from_test}. All should be 0
+with \code{split = "night"}. With \code{strict = TRUE}, any count above 0 is an
+error.
 }
 
 \seealso{
