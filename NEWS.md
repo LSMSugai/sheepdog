@@ -1,5 +1,16 @@
 # sheepdog (development version)
 
+- `run_app()` gains the Sampling and Export tabs, opened with
+  `selection_dir` and `output_dir`. Sampling is a form for the design of
+  `select_clips()`: *Draw* shows the clips per site and species and their
+  inclusion probabilities, and warns that `"top"` clips do not estimate
+  the false-positive rate; *Cut clips* calls `cut_clips()` (or simulates
+  it) and writes `clip_manifest.csv`, `extraction_info.csv` and `clips/`,
+  and the new clips go straight to the Review tab. Export calls
+  `export_occupancy_data()` with the verdicts of the app (combined by
+  `consensus_verdicts()` across reviewers) and shows the summary of
+  `schema.json`. New arguments `recordings` and `classifier`;
+  `run_app(manifest, clips_dir)` works as before.
 - New `run_app()`: a local 'shiny' app to review the clips one at a time,
   with spectrogram, player, the data of each clip and keyboard shortcuts
   (`p`, `n`, `u`, arrows); `max_freq` limits the spectrogram band. Each
@@ -9,7 +20,7 @@
   reviewer sees only their clips. New `app_verdicts()` turns that file into
   the table of `classify_review()`, so the rest of stage 1, the agreement
   between reviewers and the calibration work unchanged. New article
-  "Reviewing clips in the sheepdog app". 'shiny' joins Suggests.
+  "Sampling, reviewing and exporting in the sheepdog app". 'shiny' joins Suggests.
 - `exclude_training_clips()` with a table of `training_nights()` and
   `level = "recording"` reads `source_audio` with the pattern given to
   `training_nights()` (kept in the attribute `"pattern"` of its table), or

@@ -396,10 +396,17 @@ de veredictos, o export). `shiny` entra em Suggests.
    CSV de veredictos que `read_validations()` lê, no lugar de separar os
    clipes em pastas. Fila por revisor a partir de `assign_reviewers()`;
    `reviewer_agreement()` e `consensus_verdicts()` continuam iguais.
-2. **Sorteio e exportação.** Formulário para o desenho de `select_clips()`
-   (`top`, `random_detections`, `random_recordings`), estrato e número de
-   clipes, mostrando a probabilidade de inclusão; botão que chama
-   `export_occupancy_data()`.
+2. **Sorteio e exportação. Feito em 01/11/2026:** abas Sampling e Export
+   do `run_app()`, abertas com `selection_dir` e `output_dir`. Sampling:
+   formulário para o desenho de `select_clips()` (modo, estrato, `n_top`,
+   `target_total`/`max_per_species`, filtros de sítio, espécie e hora,
+   seed), prévia das contagens por sítio x espécie e da probabilidade de
+   inclusão, aviso de que `top` não estima falsos positivos; o corte chama
+   `cut_clips()` e grava `clip_manifest.csv`, `extraction_info.csv` e
+   `clips/`, e os clipes novos entram direto na fila da revisão (que passou
+   a ser reativa). Export: chama `export_occupancy_data()` com os
+   veredictos do app (consenso entre revisores) e mostra o resumo do
+   `schema.json`. Sem calibração no export até o item 3.
 3. **Calibração.** Primeiro com lme4, ao vivo: comparação de modelos, curva
    de calibração e `calibration_ppc()` em gráficos. brms como opção para
    quem tem CmdStan, rodando em segundo plano com barra de progresso.

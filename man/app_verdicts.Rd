@@ -9,7 +9,8 @@ app_verdicts(manifest, verdicts_file, clips_dir = NULL, reviewer = NULL)
 \arguments{
 \item{manifest}{Clip manifest: a data frame or the path to
 \code{clip_manifest.csv} (from \code{\link[=select_clips]{select_clips()}}, \code{\link[=cut_clips]{cut_clips()}} or
-\code{\link[=assign_reviewers]{assign_reviewers()}}).}
+\code{\link[=assign_reviewers]{assign_reviewers()}}). With \code{output_dir}, by default
+\verb{<output_dir>/clip_manifest.csv} when it exists.}
 
 \item{verdicts_file}{CSV written by \code{\link[=run_app]{run_app()}}.}
 

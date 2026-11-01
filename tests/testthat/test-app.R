@@ -72,7 +72,8 @@ test_that("the queue follows the reviewer of assign_reviewers()", {
   expect_error(review_queue(man, file.path(d, "nada")), "None of the clips")
   file.remove(fila$path[1])
   expect_warning(review_queue(man, file.path(d, "clips")), "not found")
-  expect_error(review_queue(man["clip_file"], d), "lacks the column")
+  expect_error(suppressWarnings(review_queue(man["clip_file"], d)),
+               "lacks the column")
 })
 
 test_that("the app writes each verdict and moves to the next clip", {
@@ -147,4 +148,133 @@ test_that("app_verdicts() returns the table of classify_review()", {
   expect_identical(sum(p$n_reviewed), 1L)
   append_verdict(f, "fora.wav", "sp_a", "ana", "positive")
   expect_warning(suppressMessages(app_verdicts(man, f)), "not in the")
+})
+
+test_that("the review queue can be a reactive that starts empty", {
+  skip_if_not_installed("shiny")
+  d <- withr::local_tempdir()
+  man <- app_dados(d)
+  cortada <- review_queue(man, file.path(d, "clips"))
+  f <- file.path(d, "verdicts.csv")
+  entrada <- shiny::reactiveVal(NULL)
+  shiny::testServer(review_server, args = list(
+    fila = entrada, verdicts_file = f, reviewer = "ana"), {
+      session$setInputs(species = "", pending = TRUE)
+      expect_true(is.na(atual()))
+      expect_match(output$current_verdict, "Sampling tab")
+      session$setInputs(positive = 1)
+      expect_false(file.exists(f))
+      # clipes recem-cortados chegam a fila
+      entrada(cortada)
+      session$flushReact()
+      expect_identical(atual(), 1L)
+      expect_identical(output$progress, "0 of 6 clips reviewed")
+      session$setInputs(positive = 2)
+      expect_identical(read_verdict_log(f)$clip_file, "clip1.wav")
+      expect_identical(atual(), 2L)
+    })
+})
+
+test_that("sampling_args() keeps only the filled fields", {
+  a <- sampling_args(list(mode = "random_detections", occasion_unit = "file",
+                          threshold = NA, n_top = 2, min_confidence = 0.1,
+                          seed = 2026, target_total = NA,
+                          max_per_species = 5, sites = NULL,
+                          species = c("boa-ran"), hour_start = NA,
+                          hour_end = NA, remap_from = "", remap_to = "",
+                          strata = "night", recording_fraction = 0.5))
+  expect_identical(a$strata, "night")
+  expect_identical(a$max_per_species, 5)
+  expect_null(a$threshold)
+  expect_null(a$remap_from)
+  expect_null(a$recording_fraction)
+})
+
+test_that("the sampling tab draws, then cuts and writes the manifest", {
+  skip_if_not_installed("shiny")
+  ex <- system.file("extdata", "example", package = "sheepdog")
+  det <- suppressMessages(read_selection_tables(file.path(ex, "birdnet")))
+  out <- withr::local_tempdir()
+  shiny::testServer(sampling_server, args = list(
+    detections = det, selection_dir = file.path(ex, "birdnet"),
+    output_dir = out, classifier = "test"), {
+      session$setInputs(mode = "random_detections", occasion_unit = "file",
+                        threshold = 0.5, n_top = 1, strata = "night",
+                        target_total = NA, max_per_species = NA,
+                        min_confidence = 0.1, sites = "ARA", species = NULL,
+                        hour_start = NA, hour_end = NA, seed = 2026,
+                        remap_from = "", remap_to = "", simulate = TRUE,
+                        replace = FALSE)
+      session$setInputs(cut = 1)
+      expect_match(notas(), "Draw the clips first")
+      session$setInputs(draw = 1)
+      sel <- selecao()
+      ref <- suppressWarnings(suppressMessages(select_clips(
+        det, sampling_mode = "random_detections", threshold = 0.5,
+        n_top = 1, strata = "night", sites = "ARA", seed = 2026)))
+      expect_identical(sel$clip_file, ref$clip_file)
+      expect_true(all(sel$site == "ARA"))
+      expect_match(output$counts, "ARA")
+      # simulado: nada gravado, a fila nao recarrega
+      session$setInputs(cut = 2)
+      expect_true(all(status()$status == "audio_not_found"))
+      expect_false(file.exists(file.path(out, "clip_manifest.csv")))
+      expect_identical(cortes(), 0L)
+      session$setInputs(simulate = FALSE, cut = 3)
+      man <- readr::read_csv(file.path(out, "clip_manifest.csv"),
+                             show_col_types = FALSE)
+      expect_identical(man$clip_file, sel$clip_file)
+      info <- readr::read_csv(file.path(out, "extraction_info.csv"),
+                              show_col_types = FALSE)
+      expect_identical(info$value[info$key == "select_clips.strata"],
+                       "night")
+      expect_identical(info$value[info$key == "classifier"], "test")
+      expect_identical(cortes(), 1L)
+      # nao sobrescreve o manifesto sem pedir
+      session$setInputs(cut = 4)
+      expect_match(notas(), "already exists")
+      expect_identical(cortes(), 1L)
+      # top avisa que nao estima falsos positivos
+      session$setInputs(mode = "top", draw = 2)
+      expect_true(any(grepl("false-positive rate", notas())))
+    })
+})
+
+test_that("the export tab writes the occupancy tables with the verdicts", {
+  skip_if_not_installed("shiny")
+  ex <- system.file("extdata", "example", package = "sheepdog")
+  det <- suppressMessages(read_selection_tables(file.path(ex, "birdnet")))
+  rec <- readr::read_csv(file.path(ex, "recordings.csv"),
+                         show_col_types = FALSE)
+  out <- withr::local_tempdir()
+  man <- suppressWarnings(suppressMessages(select_clips(
+    det, sampling_mode = "random_detections", threshold = 0.5, n_top = 1,
+    sites = "ARA")))
+  readr::write_csv(man, file.path(out, "clip_manifest.csv"))
+  f <- file.path(out, "verdicts.csv")
+  for (i in 1:4) {
+    append_verdict(f, man$clip_file[i], man$species_folder[i], "ana",
+                   c("positive", "negative")[1 + i %% 2])
+  }
+  # dois revisores discordam num clipe
+  append_verdict(f, man$clip_file[1], man$species_folder[1], "bia",
+                 "positive")
+  shiny::testServer(export_server, args = list(
+    detections = det, output_dir = out, clips_dir = file.path(out, "clips"),
+    verdicts_file = f, recordings = rec), {
+      session$setInputs(occasion_unit = "file", min_confidence = 0.1,
+                        export_dir = file.path(out, "occupancy"),
+                        overwrite = FALSE, export = 1)
+      r <- resultado()
+      expect_false(is.null(r))
+      expect_true(file.exists(file.path(out, "occupancy", "schema.json")))
+      expect_identical(r$schema$schema, "sheepdog-occupancy")
+      expect_identical(nrow(r$tables$validation), 4L)
+      expect_identical(sum(r$tables$validation$verdict == "disagreement"),
+                       1L)
+      expect_match(output$tables, "validation")
+      # sem overwrite, a segunda exportacao falha com aviso no app
+      session$setInputs(export = 2)
+      expect_true(any(grepl("^Error", notas())))
+    })
 })
