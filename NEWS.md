@@ -1,4 +1,20 @@
-# sheepdog (development version)
+# sheepdog 3.3.0
+
+This release adds the data contract with the crywolf package and the
+Monte Carlo propagation of the calibration (phases 0 and 1 of the
+integration), a local app to draw, review and export clips, and the
+splits and checks for retraining BirdNET-Analyzer.
+
+- Integration with crywolf: `export_occupancy_data()` (schema
+  `sheepdog-occupancy` 1.1-1.3), `occasion_draws()`, `calibration_ppc()`,
+  `covariate_bins()` and a contract test against crywolf.
+- Review: `run_app()`, `app_verdicts()` and `review_support()`.
+- Retraining: `build_training_set()` with splits by night, a validation
+  set by night, a cap per site x species and non-event negatives;
+  `training_nights()` and `exclude_training_clips()` by recording or
+  night.
+
+## All changes
 
 - `build_training_set()` gains `negatives_folder`: with a non-event class
   of BirdNET-Analyzer (e.g. `"Noise"`), every negative goes to that
