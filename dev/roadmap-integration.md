@@ -60,7 +60,7 @@ proporcional por sítio. É o equivalente ao `sampling_mode =
 "random_recordings"` do sheepdog e identifica as distribuições de scores dos
 verdadeiros e dos falsos positivos sem depender do classificador.
 
-## Estado (27/10/2026)
+## Estado (01/11/2026)
 
 - 01/11/2026: **sheepdog 3.3.0 lançado** (tag `v3.3.0`), com as fases 0 e
   1, o app local (revisão, sorteio e export) e o retreino por noite. É a
@@ -103,6 +103,22 @@ verdadeiros e dos falsos positivos sem depender do classificador.
   cópia dele continua idêntica à do sheepdog.
 - Próximo passo: o `fp_occu_dyn()` no crywolf; a fase 2 vem depois dele
   (ver Prioridades). No sheepdog, nada bloqueia: só pendências pequenas.
+- 01/11/2026, **`fp_occu_dyn()` no crywolf (2.1.0.9000, experimental):**
+  passos 1 a 4 de 8 com merge (crywolf#8, #9, #10): temporada no
+  `fp_data(season = )`, forward em Stan com as emissões do `fp_occu()`
+  (log-densidade igual com uma temporada, ~3e-14), fórmulas `psi1`, `col`
+  e `ext` com covariáveis de temporada (`season_covs`), e estados latentes
+  por FFBS (`fp_sites()` por sítio-temporada, `fp_ppc()`, `simulate()`,
+  `simulate_fp_dyn()`). Temporadas que são datas (`night`,
+  `recording_date` do export) são preenchidas pelo `fp_data()`, então
+  cada transição vale uma noite; o esquema do sheepdog não muda. Passo 5
+  (quantidades derivadas: ocupação por temporada, rotatividade, equilíbrio)
+  no crywolf#11, aberto. Faltam os passos 6 e 7 (identificação diante dos
+  falsos positivos e validação, ~7.300 ajustes na AWS, estimados em
+  US$ 3 a 5) e o 8 (vinheta do Curiango com as noites como temporadas,
+  comparada por LOO com sítio-noites independentes). O crywolf de
+  desenvolvimento também lê os exports 1.3 (calibração com covariável
+  contínua), ainda sem release.
 - Modo sazonal refeito em 27/10/2026 (`curiango-export.R` com `"season"`,
   e o fluxo com `OUT` numa pasta separada). A regra de 1 erro-padrão escolhe
   o modelo só com mês, que tira o desajuste mensal mas deixa 5 de 7
@@ -256,8 +272,12 @@ de divergência que produziu o erro de visitas do artigo do JAV).
 - O período primário do dinâmico é argumento do `fp_occu_dyn()` (a partir de
   `night` ou `recording_date`), não coluna do esquema.
 - A hipótese de que a calibração P(TP | score, sítio) mistura a prevalência
-  de canto com o erro do classificador ainda não foi testada: é a primeira
-  coisa que a simulação da fase 2 deve conferir.
+  de canto com o erro do classificador tem agora evidência empírica
+  (01/11/2026, sheepdog#67): no Curiango, P(TP | score) do classificador
+  próprio cai em noites quentes, e a calibração sem temperatura apaga o
+  efeito da temperatura na ocupação pelo caminho MC. Continua sendo a
+  primeira coisa que a simulação da fase 2 deve conferir, agora com um
+  caso real para reproduzir.
 
 ### O modelo (proposta, a validar)
 
