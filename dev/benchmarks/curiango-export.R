@@ -58,6 +58,17 @@
 #   Rscript dev/benchmarks/curiango-export.R DATA_DIR OUTPUT_DIR season
 # CALIB_MODEL=<model> forces one of the candidates instead of the
 # one-standard-error rule (e.g. CALIB_MODEL=m3_site_month).
+#
+# Calibration on a night covariate (CALIB_COVARIATE=temp, rh or moon): the
+# chosen model gains the night mean of that covariate, standardised over
+# the site-nights as in the occupancy model (moon on the log scale), as a
+# continuous covariate (`<covariate>_z`, schema 1.3). A calibration that
+# ignores a covariate of occupancy gives the same P(TP | score) to nights
+# with few and many calling animals, which can leak into the occupancy
+# coefficient of that covariate. The versions of the detections are then
+# drawn at export (N_VERSIONS, default 20, rule "sample"); reading them
+# needs crywolf >= 2.1.0.9000. ADAPT_DELTA (default 0.8) is passed to brms.
+#   CALIB_COVARIATE=temp Rscript dev/benchmarks/curiango-export.R DATA_DIR OUTPUT_DIR
 args <- commandArgs(trailingOnly = TRUE)
 data_dir <- if (length(args)) args[1] else "dev/benchmarks/data/curiango"
 out <- if (length(args) > 1) args[2] else "dev/benchmarks/results/curiango-export"
@@ -93,6 +104,22 @@ covariates <- raw |>
   ungroup() |>
   transmute(site = Site, source_audio = audio(Site, DataHora_Formatada),
             night_site_id, temp, rh, moon, bio = BIO, aci = ACI)
+
+# covariavel da noite na calibracao (schema 1.3), padronizada sobre as
+# noites-local como no modelo de ocupacao
+calib_cov <- Sys.getenv("CALIB_COVARIATE")
+cov_scaling <- NULL
+if (nzchar(calib_cov)) {
+  stopifnot(calib_cov %in% c("temp", "rh", "moon"))
+  tr <- if (calib_cov == "moon") log else identity
+  noites <- distinct(covariates, night_site_id, .keep_all = TRUE)
+  centro <- mean(tr(noites[[calib_cov]]))
+  escala <- sd(tr(noites[[calib_cov]]))
+  cov_z <- paste0(calib_cov, "_z")
+  covariates[[cov_z]] <- (tr(covariates[[calib_cov]]) - centro) / escala
+  cov_scaling <- stats::setNames(list(c(center = centro, scale = escala)), cov_z)
+}
+n_versions <- as.integer(Sys.getenv("N_VERSIONS", "20"))
 
 # mes da gravacao (YYYYMM), a partir do nome do arquivo
 month_of <- function(path) {
@@ -159,6 +186,12 @@ for (cl in names(classifiers)) {
               confidence, logit_conf = safe_logit(confidence),
               tp = as.integer(verdict == "positive"), source_audio,
               month = factor(month_of(source_audio)))
+  if (nzchar(calib_cov)) {
+    val_cal <- left_join(val_cal, distinct(covariates, source_audio,
+                                           across(all_of(cov_z))),
+                         by = "source_audio")
+    stopifnot(!anyNA(val_cal[[cov_z]]))
+  }
   if (season) {
     models <- list(m0_global = tp ~ logit_conf,
                    m1_site_intercept = tp ~ logit_conf + (1 | site),
@@ -180,12 +213,15 @@ for (cl in names(classifiers)) {
     chosen <- forced
   }
   formula <- stats::as.formula(comparison$formula[comparison$model == chosen])
+  if (nzchar(calib_cov)) formula <- stats::update(formula, paste(". ~ . +", cov_z))
   message("Calibration model: ", chosen, " (", deparse1(formula), ")")
   backend <- if (requireNamespace("cmdstanr", quietly = TRUE)) "cmdstanr" else "rstan"
   fit <- fit_calibration(val_cal, formula, engine = "brms",
                          prior = calibration_prior(formula, val_cal),
                          chains = 4, iter = 2000, cores = 4, seed = seed,
-                         backend = backend, refresh = 0)
+                         backend = backend, refresh = 0,
+                         control = list(adapt_delta = as.numeric(
+                           Sys.getenv("ADAPT_DELTA", "0.8"))))
   diagnostics <- calibration_diagnostics(fit)
 
   dir_cl <- file.path(out, tolower(cl))
@@ -196,7 +232,9 @@ for (cl in names(classifiers)) {
     min_confidence = min_confidence,
     classifier = paste("Curiango", cl, "(Piatti et al., Zenodo 10.5281/zenodo.21795898)",
                        if (season) "- seasonal calibration (sensitivity)"),
-    n_draws = 100, seed = seed, overwrite = TRUE)
+    n_draws = 100, seed = seed, overwrite = TRUE,
+    n_versions = if (nzchar(calib_cov)) n_versions,
+    covariate_scaling = cov_scaling)
   write_csv(comparison, file.path(dir_cl, "curiango_calibration_comparison.csv"))
   write_csv(diagnostics, file.path(dir_cl, "curiango_calibration_diagnostics.csv"))
   # ajuste e dados da calibracao, para o posterior predictive check

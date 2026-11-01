@@ -77,6 +77,16 @@ verdadeiros e dos falsos positivos sem depender do classificador.
   que os classificadores convergem sem limiar não se confirmou para a
   temperatura; a comparação é aproximada (sem efeito aleatório do gravador
   na detecção). Detalhes em `dev/benchmarks/README.md`.
+- 01/11/2026: **causa da queda da temperatura: a calibração.** O efeito
+  aleatório do gravador não muda nada (−0,035 contra −0,028). Nos minutos
+  revisados do classificador próprio, P(TP | score) cai em noites quentes
+  (−0,37 por DP, p = 0,03); a calibração sem temperatura infla as
+  detecções dessas noites. Com a temperatura na calibração (esquema 1.3) e
+  *M* = 20, o efeito volta a −0,40 (−1,05 a −0,12), entre MaxF1 e
+  MaxPrecision. Recomendação: a calibração deve incluir as covariáveis de
+  ocupação que mudam a prevalência. É o argumento empírico para a fase 2,
+  que estima as duas coisas juntas. O share_between da temperatura é 0,90,
+  então a estimativa definitiva pede *M* ≈ 90.
 - Fase 0 feita: `export_occupancy_data()` (sheepdog#36) e `fp_read_sheepdog()`
   (crywolf 1.9.0, doi:10.5281/zenodo.23624712).
 - Fase 1 feita do lado do sheepdog: os sete itens da integração (abaixo)
