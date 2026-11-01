@@ -62,10 +62,18 @@ verdadeiros e dos falsos positivos sem depender do classificador.
 
 ## Estado (01/11/2026)
 
-- 01/11/2026: **sheepdog 3.3.0 lançado** (tag `v3.3.0`), com as fases 0 e
-  1, o app local (revisão, sorteio e export) e o retreino por noite. É a
-  nova candidata ao CRAN, no lugar da 3.2.1 (nunca enviada); a submissão
-  espera o DOI do artigo do JAV resolver (NOTE de URL 404).
+- 01/11/2026: **sheepdog e crywolf enviados ao CRAN.** O crywolf 2.1.0
+  passou no pré-teste (1 NOTE: submissão nova, cmdstanr e sheepdog nos
+  `Additional_repositories`) e espera a revisão manual. O sheepdog foi
+  enviado como 3.3.2 (tag `v3.3.2`), igual à 3.3.0 (fases 0 e 1, app local,
+  retreino por noite) com duas correções: a vinheta `crywolf-integration`
+  cita o artigo do JAV sem o DOI, que vai demorar (o artigo está em
+  espera na revista), na 3.3.1 (sheepdog#71); e o `occasion_draws()` lê o
+  parquet sem `mmap`, que travava o arquivo no Windows e derrubava um
+  teste no win-builder, na 3.3.2 (sheepdog#72). A 3.3.0 e a 3.3.1 nunca
+  foram enviadas. Win-builder (R-devel) e `--as-cran` local, com e sem o
+  crywolf: só a NOTE de submissão nova. O DOI do JAV volta numa versão
+  seguinte, quando resolver.
 - 01/11/2026: **fase 1 completa.** As duas análises "dev" rodaram no
   Curiango com *M* = 50 (100 ajustes convergidos). Regra de *M*: o erro de
   Monte Carlo da média é sqrt(share_between / *M*) do DP posterior, então
@@ -103,24 +111,35 @@ verdadeiros e dos falsos positivos sem depender do classificador.
   crywolf) e `test-read_sheepdog.R` no crywolf, sobre a mesma fixture
   `export-1.2`; `dev/check-sheepdog-fixture.R` do crywolf confere que a
   cópia dele continua idêntica à do sheepdog.
-- Próximo passo: o `fp_occu_dyn()` no crywolf; a fase 2 vem depois dele
-  (ver Prioridades). No sheepdog, nada bloqueia: só pendências pequenas.
+- Próximo passo: o passo 8 do `fp_occu_dyn()` (vinheta do Curiango) e o
+  release do crywolf com o dinâmico e o leitor do esquema 1.3; a fase 2
+  vem depois (ver Prioridades). No sheepdog, nada bloqueia: só a revisão
+  do CRAN e pendências pequenas.
 - 01/11/2026, **`fp_occu_dyn()` no crywolf (2.1.0.9000, experimental):**
-  passos 1 a 4 de 8 com merge (crywolf#8, #9, #10): temporada no
+  passos 1 a 7 de 8 com merge (crywolf#8 a #11 e #13): temporada no
   `fp_data(season = )`, forward em Stan com as emissões do `fp_occu()`
   (log-densidade igual com uma temporada, ~3e-14), fórmulas `psi1`, `col`
   e `ext` com covariáveis de temporada (`season_covs`), e estados latentes
   por FFBS (`fp_sites()` por sítio-temporada, `fp_ppc()`, `simulate()`,
   `simulate_fp_dyn()`). Temporadas que são datas (`night`,
   `recording_date` do export) são preenchidas pelo `fp_data()`, então
-  cada transição vale uma noite; o esquema do sheepdog não muda. Passo 5
-  (quantidades derivadas: ocupação por temporada, rotatividade, equilíbrio)
-  no crywolf#11, aberto. Faltam os passos 6 e 7 (identificação diante dos
-  falsos positivos e validação, ~7.300 ajustes na AWS, estimados em
-  US$ 3 a 5) e o 8 (vinheta do Curiango com as noites como temporadas,
-  comparada por LOO com sítio-noites independentes). O crywolf de
-  desenvolvimento também lê os exports 1.3 (calibração com covariável
-  contínua), ainda sem release.
+  cada transição vale uma noite; o esquema do sheepdog não muda.
+  Quantidades derivadas por temporada (ocupação esperada e realizada,
+  rotatividade, equilíbrio) no `summary()` (crywolf#11). Passos 6 e 7 na
+  AWS (crywolf#13; 4.450 tarefas, 6.700 ajustes, sem falhas; sem o
+  `fp_calibrate()`, como combinado): com `fp = ~ 1`, colonização,
+  extinção e `psi1` ficam com viés < 0,02 e cobertura de 0,88–1,00 em
+  todas as 45 células de identificação, inclusive sem verificação; a
+  verificação estreita os intervalos (`p10_bar` 20–25% mais estreito com
+  40% verificado). Ignorar os falsos positivos superestima a colonização
+  (+0,06 a +0,28 com p10 de 0,02 a 0,10). Recuperação com covariáveis:
+  cobertura de 0,92–0,98. SBC: ranks uniformes em 8 de 10 parâmetros;
+  `ext_(Intercept)` (p = 0,003) com posterior um pouco conservadora e
+  `fp_(Intercept)` (p = 0,048). O desenho não testou p11 baixo. Falta o
+  passo 8 (vinheta do Curiango com as noites como temporadas, comparada
+  por LOO com sítio-noites independentes). O crywolf de desenvolvimento
+  também lê os exports 1.3 (calibração com covariável contínua); nada
+  disso tem release ainda (a 2.1.0 enviada ao CRAN não tem).
 - Modo sazonal refeito em 27/10/2026 (`curiango-export.R` com `"season"`,
   e o fluxo com `OUT` numa pasta separada). A regra de 1 erro-padrão escolhe
   o modelo só com mês, que tira o desajuste mensal mas deixa 5 de 7
@@ -164,8 +183,9 @@ só a fase 3.
 
 No sheepdog, a 3.2.1 vai para o CRAN como está; as fases 0, 1 e 3 entram
 como funções novas numa 3.3.0 (sem quebra). Atualizado em 01/11/2026: a
-3.2.1 nunca foi enviada; a 3.3.0 (fases 0 e 1) foi lançada e é a
-candidata ao CRAN; a fase 3 entra numa versão seguinte.
+3.2.1 nunca foi enviada; a 3.3.0 (fases 0 e 1) foi lançada e foi ao
+CRAN como 3.3.2 (vinheta sem o DOI do JAV e uma correção para o
+Windows); a fase 3 entra numa versão seguinte.
 
 ## Fase 0: contrato de dados
 
