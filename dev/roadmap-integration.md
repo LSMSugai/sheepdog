@@ -111,10 +111,12 @@ verdadeiros e dos falsos positivos sem depender do classificador.
   crywolf) e `test-read_sheepdog.R` no crywolf, sobre a mesma fixture
   `export-1.2`; `dev/check-sheepdog-fixture.R` do crywolf confere que a
   cópia dele continua idêntica à do sheepdog.
-- Próximo passo: o passo 8 do `fp_occu_dyn()` (vinheta do Curiango) e o
-  release do crywolf com o dinâmico e o leitor do esquema 1.3; a fase 2
-  vem depois (ver Prioridades). No sheepdog, nada bloqueia: só a revisão
-  do CRAN e pendências pequenas.
+- Próximo passo (02/11/2026): o **multiespécies** (fase 5, a Fase A do
+  roadmap do crywolf, `fp_occu_ms()`), que passa à frente da fase 2 (ver
+  Prioridades). Do lado do sheepdog, a primeira tarefa é a fixture do
+  contrato com várias espécies (ver Fase 5). Pendente no crywolf: merge do
+  passo 8 (crywolf#14) e o release com o dinâmico e o leitor do esquema
+  1.3.
 - 01/11/2026, **`fp_occu_dyn()` no crywolf (2.1.0.9000, experimental):**
   passos 1 a 7 de 8 com merge (crywolf#8 a #11 e #13): temporada no
   `fp_data(season = )`, forward em Stan com as emissões do `fp_occu()`
@@ -135,11 +137,22 @@ verdadeiros e dos falsos positivos sem depender do classificador.
   (+0,06 a +0,28 com p10 de 0,02 a 0,10). Recuperação com covariáveis:
   cobertura de 0,92–0,98. SBC: ranks uniformes em 8 de 10 parâmetros;
   `ext_(Intercept)` (p = 0,003) com posterior um pouco conservadora e
-  `fp_(Intercept)` (p = 0,048). O desenho não testou p11 baixo. Falta o
-  passo 8 (vinheta do Curiango com as noites como temporadas, comparada
-  por LOO com sítio-noites independentes). O crywolf de desenvolvimento
+  `fp_(Intercept)` (p = 0,048). O desenho não testou p11 baixo. O crywolf de desenvolvimento
   também lê os exports 1.3 (calibração com covariável contínua); nada
   disso tem release ainda (a 2.1.0 enviada ao CRAN não tem).
+- 02/11/2026, **passo 8 do `fp_occu_dyn()` feito** (crywolf#14, CI
+  verde, ainda sem merge). O LOO não serve aqui, porque o `log_lik` do
+  dinâmico é por sítio e o Curiango tem 7 sítios. A comparação foi por
+  validação cruzada em blocos de 7 noites (10 dobras, as mesmas em todos
+  os sítios): o dinâmico (`col`/`ext ~ temp_d + rh_d`) contra
+  sítio-noites independentes (`occ ~ temp_d + rh_d`), os dois com
+  `det ~ bio + aci`, `fp ~ temp + rh` e `random_recorder`. Resultado: elpd
+  dinâmico − independente = +191,5 (EP 29,0); o dinâmico ganha nas 10
+  dobras e nos 7 sítios. O EP trata as 69 unidades sítio × dobra como
+  independentes e provavelmente sai um pouco pequeno. Um ajuste
+  independente (dobra 8) ficou preso numa moda (R-hat 1,54) e foi refeito
+  com outra semente, sem mudar o elpd. Com isso o `fp_occu_dyn()` cumpriu
+  os oito passos, e o Diogo decidiu seguir para o multiespécies.
 - Modo sazonal refeito em 27/10/2026 (`curiango-export.R` com `"season"`,
   e o fluxo com `OUT` numa pasta separada). A regra de 1 erro-padrão escolhe
   o modelo só com mês, que tira o desajuste mensal mas deixa 5 de 7
@@ -161,10 +174,10 @@ verdadeiros e dos falsos positivos sem depender do classificador.
 |---|---|---|---|---|
 | 1 | 0. Contrato de dados | os dois | P–M | — |
 | 2 | 1. Propagação Monte Carlo da calibração | os dois | P | fase 0 |
-| 3 | 2. Modelo conjunto score–ocupação | crywolf | G | fase 0; depois do `fp_occu_dyn()` (decidido em 27/10/2026) |
-| 4 | 3. Validação em duas camadas | sheepdog (+ crywolf) | M | fase 2 |
-| 5 | 4. Atividade vocal (densidade de chamadas) | crywolf | M–G | fase 2 |
-| 6 | 5. Comunidade | crywolf | G | roadmap do crywolf (MSO, Fase A) |
+| 3 | 5. Comunidade | crywolf (+ sheepdog: fixture e verificação por espécie) | G | fase 0; `fp_occu_dyn()` pronto (decidido em 02/11/2026) |
+| 4 | 2. Modelo conjunto score–ocupação | crywolf | G | fase 0; depois do multiespécies |
+| 5 | 3. Validação em duas camadas | sheepdog (+ crywolf) | M | fase 2 |
+| 6 | 4. Atividade vocal (densidade de chamadas) | crywolf | M–G | fase 2 |
 | — | App local (Shiny) | sheepdog | M | nada; em paralelo |
 
 Em paralelo a tudo: o benchmark (seção própria), que decide se cada fase
@@ -180,6 +193,14 @@ a do `fp_occu()`); a fase 2 ainda é pesquisa (famílias de f₁/f₀,
 covariáveis, identificação junto com ψ e θ). Até lá, `fp ~ temp + rh` é o
 paliativo do lado do crywolf. Nenhum item do sheepdog depende da fase 2,
 só a fase 3.
+
+Decidido pelo Diogo em 02/11/2026, com o `fp_occu_dyn()` pronto (oito
+passos): o multiespécies (fase 5, Fase A do crywolf) vem **antes** da
+fase 2. Ele segue o plano do crywolf, que já tem critérios de pronto
+(log-densidade igual à do `fp_occu()` com uma espécie; recuperação com 5,
+20 e 50 espécies), e usa as detecções binárias com o falso positivo por
+espécie, sem depender dos scores. A fase 2 continua sendo pesquisa e entra
+depois; os scores por espécie chegam ao multiespécies só então.
 
 No sheepdog, a 3.2.1 vai para o CRAN como está; as fases 0, 1 e 3 entram
 como funções novas numa 3.3.0 (sem quebra). Atualizado em 01/11/2026: a
@@ -426,15 +447,34 @@ com canto dada a ocupação, com covariáveis (lua, temperatura). Precisa de
 É aqui que se testa a hipótese da lua do Curiango (efeito na intensidade,
 não na ocupação). Também é o caso natural dos anuros em coro do FrogNet.
 
-**[decidir]** Se a fase 4 vem antes ou depois da comunidade.
+Vem depois da comunidade: depende da fase 2, que ficou para depois do
+multiespécies (decidido em 02/11/2026).
 
 ## Fase 5: comunidade
 
 Segue a Fase A do roadmap do crywolf (`fp_occu_ms()`, falso positivo por
-espécie, independente entre espécies), agora com scores por espécie. As
+espécie, independente entre espécies), primeiro com as detecções binárias
+e, depois da fase 2, com scores por espécie. As
 `community_matrices_draws()` do sheepdog passam a ser a linha de base para
 comparar: matrizes de comunidade com e sem modelo de observação, numa
 análise de metacomunidade.
+
+O esquema do export já é multiespécies: `scores.csv`, `verification.csv`
+e as chaves da calibração têm `species`, e `schema.json` lista as espécies.
+Mas nenhum dos dois lados testa isso hoje: as fixtures `export-1.1` a
+`export-1.3` têm uma espécie só (*Physalaemus cuvieri*), e o
+`fp_draws_data()` do crywolf para quando o export tem mais de uma espécie
+(exige `fp_read_sheepdog(species = )`). Passos (02/11/2026):
+
+| Passo | Pacote | Pronto quando |
+|---|---|---|
+| Fixture `export-1.3-ms`: três espécies, uma delas rara (poucas detecções e poucos clipes verificados), com calibração por espécie | sheepdog | `test-contract.R` confere as chaves por espécie; a cópia no crywolf é idêntica (`dev/check-sheepdog-fixture.R`) |
+| Leitura de todas as espécies: `fp_read_sheepdog(species = NULL)` → `fp_data()` em formato longo (passo "Dados" da Fase A) | crywolf | `print()` e os avisos de desenho por espécie sobre a fixture |
+| Verificação por espécie: conferir quantos clipes verificados cada espécie recebe com `target_total` (divisão igual entre espécies) e com `random_recordings` (cada gravação revisada para todas as espécies); avisar quando uma espécie fica abaixo de um mínimo | sheepdog | simulação com uma espécie rara; aviso no `select_clips()` ou no `export_occupancy_data()` |
+| Dados reais para a vinheta do `fp_occu_ms()` | os dois | **[decidir]** quais dados: o Curiango é uma espécie só, e os dados do FrogNet não entram nos pacotes (só resultados pré-computados, se o Diogo quiser) |
+
+O risco apontado no crywolf (verificação rara demais nas espécies raras) é
+o que o terceiro passo mede do lado do desenho.
 
 A confusão entre espécies (A marcada quando quem canta é B) continua **fora
 do plano**, como decidido no roadmap do crywolf. A literatura sobre ela

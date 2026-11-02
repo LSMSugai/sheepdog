@@ -2,6 +2,11 @@
 
 - `dev/roadmap-integration.md`: CRAN submissions of sheepdog 3.3.2 and
   crywolf 2.1.0, and steps 5 to 7 of `crywolf::fp_occu_dyn()`.
+- `dev/roadmap-integration.md`: step 8 of `crywolf::fp_occu_dyn()` (blocked
+  cross-validation on the Curiango data) and the multi-species model
+  (phase 5) moved ahead of phase 2, with the sheepdog side of it: a
+  multi-species fixture of the data contract and a check of verification
+  per species.
 
 # sheepdog 3.3.2
 
