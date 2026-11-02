@@ -593,8 +593,10 @@ calibration_effort <- function(validations, formula,
 #' night of each detection is its recording date, or the day before for
 #' recordings that start before `dawn_hour`.
 #'
-#' @param tables Named character vector of selection-table paths, named by
-#'   site (the site names of the calibration).
+#' @param tables Named character vector, named by site (the site names of
+#'   the calibration): the path of the combined selection table of each
+#'   site, or the folder of its per-audio tables (see
+#'   [read_selection_tables()]).
 #' @param fit Model returned by [fit_calibration()].
 #' @param min_confidence Detections below this confidence are not scored.
 #' @param dawn_hour Recordings that start before this hour belong to the
@@ -634,10 +636,11 @@ score_detections <- function(tables, fit, min_confidence = 0.1,
       return(NULL)
     }
     message("Scoring ", loc, " (", caminho, ")...")
-    tb <- read_tsv(caminho, show_col_types = FALSE, progress = FALSE,
-                   col_select = c(`Species Code`, Confidence,
-                                  `Begin Path`, `File Offset (s)`))
-    names(tb) <- c("species_code", "confidence", "begin_path", "file_offset")
+    tb <- read_score_columns(caminho)
+    if (is.null(tb)) {
+      warning("No table read for ", loc, ": ", caminho)
+      return(NULL)
+    }
     m <- str_match(basename(tb$begin_path), "(\\d{8})_(\\d{6})")
     tb <- tb |>
       mutate(
@@ -685,6 +688,30 @@ score_detections <- function(tables, fit, min_confidence = 0.1,
   }) |>
     compact() |>
     list_rbind()
+}
+
+# Colunas usadas na pontuacao, de uma tabela combinada (arquivo) ou das
+# tabelas por audio de uma pasta
+read_score_columns <- function(caminho) {
+  colunas <- c("species_code", "confidence", "begin_path", "file_offset")
+  if (!dir.exists(caminho)) {
+    tb <- read_tsv(caminho, show_col_types = FALSE, progress = FALSE,
+                   col_select = c(`Species Code`, Confidence,
+                                  `Begin Path`, `File Offset (s)`))
+    names(tb) <- colunas
+    return(tb)
+  }
+  fontes <- suppressMessages(find_selection_tables(
+    caminho, "^BirdNET_SelectionTable\\.txt$",
+    "\\.BirdNET\\.selection\\.table\\.txt$"))
+  if (length(fontes) == 0) return(NULL)
+  if (length(fontes) > 1) {
+    stop("The folder ", caminho, " holds tables in ", length(fontes),
+         " folders; give one folder per site.", call. = FALSE)
+  }
+  tb <- read_site_tables(fontes[[1]])
+  if (is.null(tb)) return(NULL)
+  select(tb, all_of(colunas))
 }
 
 #' Nightly detection history
@@ -851,7 +878,9 @@ plot_calibration <- function(fit, validations, min_confidence = 0.1,
 #' @param validation_files Paths to the `validation_by_clip.csv` files of
 #'   the sites (v1.2.0 `validacao_por_clipe.csv` files are also read).
 #' @param prediction_tables Named character vector of the complete
-#'   selection tables, named by site.
+#'   selection tables, named by site: the path of each combined table, or
+#'   the folder of the per-audio tables of each site (see
+#'   [score_detections()]).
 #' @param output_dir Output folder; created if needed. The calibrated
 #'   detections of a large project can take hundreds of MB.
 #' @inheritParams read_validations

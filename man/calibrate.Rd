@@ -33,7 +33,9 @@ calibrate(
 the sites (v1.2.0 \code{validacao_por_clipe.csv} files are also read).}
 
 \item{prediction_tables}{Named character vector of the complete
-selection tables, named by site.}
+selection tables, named by site: the path of each combined table, or
+the folder of the per-audio tables of each site (see
+\code{\link[=score_detections]{score_detections()}}).}
 
 \item{output_dir}{Output folder; created if needed. The calibrated
 detections of a large project can take hundreds of MB.}
