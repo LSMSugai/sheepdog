@@ -482,7 +482,15 @@ Mas nenhum dos dois lados testa isso hoje: as fixtures `export-1.1` a
 | Export multiespécies do FrogNet (DiverSons), fora dos repositórios dos pacotes (em `frognetUFMS/analysis`), como caso real do `fp_occu_ms()` | os dois | export lido pelo crywolf; ajuste com as 16 espécies; resultados pré-computados na vinheta depois do depósito dos dados (export feito em 02/11/2026; a verificação é refeita, ver abaixo) |
 
 O risco apontado no crywolf (verificação rara demais nas espécies raras) é
-o que o terceiro passo mede do lado do desenho.
+o que o terceiro passo mede do lado do desenho. Resultado
+(`dev/verification-by-species/README.md`): com uma espécie de 15
+detecções num só sítio, o `top` não passa de 15 clipes verificados com
+qualquer `target_total`, o `random_detections` com limiar 0,5 fica com 1
+e o `random_recordings` dá ~0 positivos com qualquer fração. Nenhum
+desenho resolve sozinho: a taxa de falso positivo da espécie rara vem da
+comunidade ou da priori, e o `export_occupancy_data()` agora nomeia essas
+espécies num aviso (`min_verified = 10`, ou nenhum positivo ou nenhum
+negativo).
 
 **Dados reais (decidido em 02/11/2026): o FrogNet.** O Curiango é uma
 espécie só. O VicFrogNET (Zenodo 10.5281/zenodo.17773400, CC BY 4.0) foi

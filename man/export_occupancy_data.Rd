@@ -28,6 +28,7 @@ export_occupancy_data(
   audio_pattern = "\\\\.(wav|flac|mp3)$",
   remap_from = NULL,
   remap_to = NULL,
+  min_verified = 10,
   classifier = NULL,
   overwrite = FALSE
 )
@@ -110,6 +111,13 @@ a reader can map the covariate back; the values of
 \item{remap_from, remap_to}{Replace the prefix \code{remap_from} of the
 \code{begin_path} paths by \code{remap_to}, e.g. \code{"N:/"} and \code{"/Volumes/Arara/"}.
 Backslashes are turned into forward slashes first.}
+
+\item{min_verified}{Species with predictions but fewer than this
+number of reviewed detection clips (positive or negative), or without
+any positive or any negative clip, are named in a warning: their
+false-positive rate will rest on the other species (a community
+model) or on the prior. The default is a floor, not a sample size
+calculation. Only used with \code{validation}.}
 
 \item{classifier}{Optional label of the classifier, recorded in
 \code{schema.json}.}
