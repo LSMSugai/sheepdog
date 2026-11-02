@@ -32,3 +32,13 @@ precision among the reviewed clips with confidence >= \code{c} reaches
 \code{target_precision}, with at least \code{min_n} clips. Candidate cuts are the
 observed confidences rounded to two decimals.
 }
+\details{
+The precision is computed from the reviewed clips of each cell alone, so
+it is reliable only when the clips were drawn at random within the cell
+and are numerous. \code{\link[=calibrated_thresholds]{calibrated_thresholds()}} derives the thresholds from
+the calibration model of stage 2 instead.
+}
+\seealso{
+\code{\link[=calibrated_thresholds]{calibrated_thresholds()}} for thresholds from the calibration
+model.
+}

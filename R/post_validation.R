@@ -123,6 +123,11 @@ precision_by_bin <- function(validation, bins = seq(0.1, 1, by = 0.1),
 #' `target_precision`, with at least `min_n` clips. Candidate cuts are the
 #' observed confidences rounded to two decimals.
 #'
+#' The precision is computed from the reviewed clips of each cell alone, so
+#' it is reliable only when the clips were drawn at random within the cell
+#' and are numerous. [calibrated_thresholds()] derives the thresholds from
+#' the calibration model of stage 2 instead.
+#'
 #' @inheritParams precision_by_bin
 #' @param target_precision Target precision.
 #'
@@ -130,6 +135,8 @@ precision_by_bin <- function(validation, bins = seq(0.1, 1, by = 0.1),
 #'   `threshold`, `n_support` and `precision_at_threshold` (`NA` when no
 #'   cut reaches the target). Without any reviewed clip with a confidence,
 #'   the tibble has no rows.
+#' @seealso [calibrated_thresholds()] for thresholds from the calibration
+#'   model.
 #' @export
 suggest_thresholds <- function(validation, target_precision = 0.90,
                                min_n = 15, by = NULL) {
