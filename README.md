@@ -58,7 +58,7 @@ install.packages(c("av", "lme4", "ggplot2"))
 
 ## Calibration performance
 
-In threshold-based approaches, xcalibration automatically compares global and site-effect
+In threshold-based approaches, calibration automatically compares global and site-effect
 models per species; with one site, it keeps only estimable candidates. Explicit model
 lists remain available in `compare_calibration_models()`.
 
