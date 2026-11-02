@@ -60,8 +60,16 @@ proporcional por sítio. É o equivalente ao `sampling_mode =
 "random_recordings"` do sheepdog e identifica as distribuições de scores dos
 verdadeiros e dos falsos positivos sem depender do classificador.
 
-## Estado (01/11/2026)
+## Estado (02/11/2026)
 
+- 02/11/2026: **sheepdog 3.3.3 reenviado ao CRAN.** Na revisão da 3.3.2,
+  o Uwe Ligges pediu duas mudanças: tirar o `stan-dev.r-universe.dev` de
+  `Additional_repositories`, que o sheepdog não usa, e citar o método na
+  Description no formato `Autores (ano) <doi:...>`. A 3.3.3 (sheepdog#76,
+  tag `v3.3.3` no commit `2152d07`) faz as duas coisas e cita Miller et
+  al. (2011), Chambert et al. (2015) e Wood & Kahl (2024). O código é o
+  mesmo da 3.3.2. O `--as-cran` local deu só as NOTEs de submissão nova e
+  do HTML Tidy. O crywolf 2.1.0 continua na fila da revisão manual.
 - 01/11/2026: **sheepdog e crywolf enviados ao CRAN.** O crywolf 2.1.0
   passou no pré-teste (1 NOTE: submissão nova, cmdstanr e sheepdog nos
   `Additional_repositories`) e espera a revisão manual. O sheepdog foi
@@ -470,8 +478,8 @@ Mas nenhum dos dois lados testa isso hoje: as fixtures `export-1.1` a
 |---|---|---|
 | Fixture `export-1.3-ms`: três espécies, uma delas rara (poucas detecções e poucos clipes verificados), com calibração por espécie (feita em 02/11/2026, sheepdog#74) | sheepdog | `test-contract.R` confere as chaves por espécie; a cópia no crywolf é idêntica (`dev/check-sheepdog-fixture.R`) |
 | Leitura de todas as espécies: `fp_read_sheepdog(species = NULL)` → `fp_data()` em formato longo (passo "Dados" da Fase A) | crywolf | `print()` e os avisos de desenho por espécie sobre a fixture |
-| Verificação por espécie: conferir quantos clipes verificados cada espécie recebe com `target_total` (divisão igual entre espécies) e com `random_recordings` (cada gravação revisada para todas as espécies); avisar quando uma espécie fica abaixo de um mínimo | sheepdog | simulação com uma espécie rara; aviso no `select_clips()` ou no `export_occupancy_data()` |
-| Export multiespécies do FrogNet (DiverSons), fora dos repositórios dos pacotes (em `frognetUFMS/analysis`), como caso real do `fp_occu_ms()` | os dois | export lido pelo crywolf; ajuste com as 16 espécies; resultados pré-computados na vinheta depois do depósito dos dados |
+| Verificação por espécie: conferir quantos clipes verificados cada espécie recebe com `target_total` (divisão igual entre espécies) e com `random_recordings` (cada gravação revisada para todas as espécies); avisar quando uma espécie fica abaixo de um mínimo | sheepdog | simulação com uma espécie rara; aviso no `select_clips()` ou no `export_occupancy_data()` (feito em 02/11/2026: `min_verified` no export e `dev/verification-by-species/`, sheepdog#75) |
+| Export multiespécies do FrogNet (DiverSons), fora dos repositórios dos pacotes (em `frognetUFMS/analysis`), como caso real do `fp_occu_ms()` | os dois | export lido pelo crywolf; ajuste com as 16 espécies; resultados pré-computados na vinheta depois do depósito dos dados (export feito em 02/11/2026; a verificação é refeita, ver abaixo) |
 
 O risco apontado no crywolf (verificação rara demais nas espécies raras) é
 o que o terceiro passo mede do lado do desenho.
@@ -503,7 +511,23 @@ a resolver no export:
 - a verificação é do modo `"top"`: as ocasiões foram sorteadas sem
   depender do score, mas o clipe revisado é o de maior score da ocasião,
   e as probabilidades de inclusão não foram registradas. Um positivo
-  confirma a ocasião; um negativo não prova que a espécie não cantou;
+  confirma a ocasião; um negativo não prova que a espécie não cantou.
+  O crywolf descarta esses clipes por padrão (`keep_top = FALSE`), e com
+  `keep_top = TRUE` a taxa de falso positivo sai subestimada. **Decidido
+  em 02/11/2026: nova rodada de verificação aleatória**
+  (`random_detections`, `frognetUFMS/analysis/sortear_rodada_aleatoria.R`,
+  manifesto no Box):
+  - limiar de 0,5 no score, o mesmo da detecção no modelo de ocupação;
+  - ocasião = gravação de 1 min, entre 16 h e 6 h;
+  - estrato sítio × espécie × mês, até 10 ocasiões por sítio × espécie,
+    com `balance_by_hour = FALSE` (`inclusion_prob` exata) e seed 2026;
+  - 1.033 ocasiões e 3.023 clipes, de 59 (*sci_fuv*) a 381 (*phy_alb*)
+    por espécie;
+  - revisão às cegas: o nome do clipe não leva o score, e a chave fica num
+    arquivo separado.
+
+  Só ~3% desses clipes já estavam na revisão antiga. Falta cortar os
+  clipes com o `cut_clips()`, que precisa dos `.flac` do NAS, e revisar;
 - com 7 sítios, a unidade da ocupação deve ser sítio × mês ou sítio ×
   noite (como no Curiango), ou o multiespécies dinâmico mais adiante;
 - o modv1 foi treinado com gravações dos mesmos sítios, então a
