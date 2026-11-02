@@ -245,9 +245,13 @@ pacote importa o outro.
 
 Decisões embutidas, a conferir:
 
-- **`max_score` por ocasião** é a estatística suficiente mínima para os
-  modelos de Rhinehart et al. (2022) e de Ogawa et al. (2025) no nível da
-  ocasião. Guardar as janelas (`detections.csv`) deixa aberta a fase 4.
+- **`max_score` por ocasião** é o que Ogawa et al. (2025) usam (o maior
+  score da hora). Não é estatística suficiente para Rhinehart et al.
+  (2022), que usam o score de cada arquivo (corrigido em 02/11/2026): o
+  máximo de *n* janelas tem distribuição própria, que depende de
+  `n_windows` (ver "Distribuição do máximo" na fase 2). Por isso
+  `n_windows` está em `scores.csv`. Guardar as janelas (`detections.csv`)
+  deixa aberta a fase 4 e o modelo por janela.
 - **Veredito de clipe ≠ estado da ocasião.** Um positivo prova que houve
   canto na ocasião; um negativo no clipe de maior score não prova ausência
   (pode haver canto com score menor). O contrato separa `validation.csv`
@@ -314,10 +318,10 @@ de divergência que produziu o erro de visitas do artigo do JAV).
 
 - O esquema 1.x basta; se faltar algo, entra como acréscimo 1.x (por
   exemplo, o score do clipe revisado quando difere do da ocasião).
-  `scores.csv` dá s_ij (`max_score`, censura em `min_confidence`),
-  `detections.csv` as predições por janela, `validation.csv` o score de cada
-  clipe, `recordings_verified.csv` o w_ij observado e `occasion_covariates`
-  as covariáveis U_ij.
+  `scores.csv` dá s_ik (`max_score`, censura em `min_confidence`) e n_ik
+  (`n_windows`), `detections.csv` as predições por janela, `validation.csv`
+  o score de cada clipe, `recordings_verified.csv` o w_ik observado e
+  `occasion_covariates` as covariáveis **d**_ik e **g**_ik.
 - Dados e desenho da validação ficam no sheepdog; f₁/f₀ e o ajuste, só no
   crywolf.
 - O período primário do dinâmico é argumento do `fp_occu_dyn()` (a partir de
@@ -332,37 +336,118 @@ de divergência que produziu o erro de visitas do artigo do JAV).
 
 ### O modelo (proposta, a validar)
 
-Sítio (ou sítio-noite) *i*, ocasião *j*:
+Notação da vinheta do crywolf (`vignettes/crywolf.Rmd`): sítio (ou
+sítio-noite) *i*, ocasião *k*. A DAG está em `dev/dag/fase2_dag.png`
+(fonte `fase2_dag.dot`, no estilo da DAG do crywolf; `Rscript
+dev/dag/make_fase2_dag.R` refaz a figura).
 
-- **Estado:** z_i ~ Bernoulli(ψ_i), logit(ψ_i) = X_i β (como no
+![DAG do modelo da fase 2](dag/fase2_dag.png)
+
+- **Estado:** z_i ~ Bernoulli(ψ_i), logit(ψ_i) = **x**_i' **β** (como no
   `fp_occu()`).
-- **Canto na ocasião:** w_ij | z_i ~ Bernoulli(z_i · θ_ij), logit(θ_ij) =
-  V_ij α, com o termo de Markov e o efeito de gravador do crywolf. θ faz o
-  papel de p11.
-- **Score:** s_ij = logit(`max_score`), com censura em `min_confidence`.
-  - s_ij | w_ij = 1 ~ f₁(μ₁ + U_ij γ₁, σ₁);
-  - s_ij | w_ij = 0 ~ f₀(μ₀ + U_ij γ₀, σ₀), com uma massa de censura (sem
-    detecção);
-  - restrição de identificação μ₁ > μ₀ (o "gap", como no `fp_gap_prior()`).
-- **Verificações:** uma ocasião de `recordings_verified` observa w_ij;
-  um clipe positivo em `validation` implica w_ij = 1; um clipe negativo
-  informa só a componente f₀ daquele score, não w_ij.
+- **Canto na ocasião:** w_ik | z_i ~ Bernoulli(z_i θ_ik), logit(θ_ik) =
+  **d**_ik' **α** + α_w w_i,k−1 + u_r[i]. θ faz o papel de p11. O termo de
+  Markov é o do crywolf, mas sobre o canto latente da ocasião anterior, e
+  não sobre a detecção observada (`y_prev`); por isso a verossimilhança
+  precisa do forward de dois estados dentro da noite.
+- **Score:** s_ik = logit(`max_score`), censurado abaixo de
+  c = logit(`min_confidence`). No nível da janela:
+  - sem canto: N(μ_0,ik, σ_0), μ_0,ik = λ_0 + **g**_ik' **γ**_0;
+  - com canto: N(μ_1,ik, σ_1), μ_1,ik = λ_0 + Δ_s + **g**_ik' **γ**_1;
+  - Δ_s > 0 é o gap dos scores, como o Δ do `fp_occu()`: mantém
+    μ_1 > μ_0 nos valores de referência das covariáveis.
+  - Como s_ik é o máximo de n_ik janelas, a densidade de s_ik dado w_ik
+    não é a normal da janela (ver "Distribuição do máximo").
+- **Verificações:** uma ocasião de `recordings_verified` observa w_ik; um
+  clipe positivo em `validation` implica w_ik = 1; um clipe negativo informa
+  só a componente sem canto daquele score (N(μ_0,ik, σ_0)), não w_ik.
 
-Este modelo junta o modelo de mistura contínua de Rhinehart et al. (2022) e
-o de classificação–ocupação de Ogawa et al. (2025) com o desenho de
-verificação de Miller et al. (2011) e de Chambert et al. (2015). O que muda
-em relação a eles, e é o que o Curiango pede:
+**De onde vem cada parte** (corrigido em 02/11/2026, depois da leitura do
+texto completo e do material suplementar de Rhinehart et al. 2022 e do
+texto completo de Ogawa et al. 2025; tabela em `dev/dag/comparacao_modelos.md`):
 
-1. **Covariáveis nas distribuições dos scores** (U_ij: BIO, ACI, gravador,
-   sítio). O erro do classificador varia no espaço (Metcalf et al. 2022), e
-   o artigo do Curiango sugere que os scores altos variam com o ambiente.
-2. **Dependência dentro da noite** pelo termo de Markov do crywolf, que
-   nenhum dos dois modelos citados tem.
-3. **Verificação com desenho conhecido** vinda do contrato.
+- a estrutura z → w → s é a de Rhinehart et al. (2022): no modelo deles,
+  f_ik ~ Bernoulli(z_i θ) indica se a espécie está no arquivo, θ é a taxa de
+  canto e os scores são N(μ_0, σ_0) ou N(μ_1, σ_1), com σ_0 ≠ σ_1. As
+  anotações por arquivo (h = 0, 1, 2) correspondem às nossas verificações
+  de clipe. No material suplementar, θ e ψ recebem covariáveis (hora do dia
+  por arquivo; área basal por sítio);
+- de Ogawa et al. (2025) vem o uso de um score por ocasião (o maior da
+  hora). O w_ij deles **não** é canto: é o status de falso positivo de uma
+  detecção, w ~ Bernoulli(q), e o modelo não usa dados verificados;
+- de Miller et al. (2011) e Chambert et al. (2015) vem o desenho de
+  verificação.
 
-**f₁ e f₀.** Normais no logit, como em Rhinehart et al. (2022), são o ponto
+O que muda em relação a esses modelos, e é o que o Curiango pede:
+
+1. **Covariáveis nas distribuições dos scores** (**g**_ik: BIO, ACI,
+   gravador, sítio). Nos dois modelos μ e σ são constantes. O erro do
+   classificador varia no espaço (Metcalf et al. 2022), e o artigo do
+   Curiango sugere que os scores altos variam com o ambiente.
+2. **Dependência dentro da noite** pelo termo de Markov. Rhinehart et al.
+   assumem arquivos independentes e dizem que o estudo empírico não corrige
+   a autocorrelação; Ogawa et al. não tratam disso.
+3. **Verificação com desenho conhecido** vinda do contrato, com seleção
+   pelo score possivelmente ignorável. Rhinehart et al. anotam um
+   subconjunto aleatório e sugerem, como extensão futura, dirigir a escuta
+   para os arquivos de score alto (p. 1787); a simulação de ignorabilidade
+   responde a isso.
+4. **Score por ocasião com a distribuição do máximo**, em vez de assumir
+   que o máximo segue a normal da janela (o que Ogawa et al. fazem
+   implicitamente).
+
+**f₀ e f₁.** Normais no logit, como em Rhinehart et al. (2022), são o ponto
 de partida. **[decidir]** Testar uma alternativa mais flexível (t de
-Student ou skew-normal) se o PPC dos scores falhar no Curiango.
+Student ou skew-normal) se o PPC dos scores falhar no Curiango. Os dois
+artigos pedem isso: componente positiva bimodal no chapim de Rhinehart et
+al. (um tipo de canto ausente do treino) e scores concentrados perto de 1
+em Ogawa et al.
+
+### Distribuição do máximo
+
+Acrescentado em 02/11/2026; inferência minha, a conferir na simulação.
+Com n_ik janelas independentes:
+
+- sem canto (w_ik = 0), todas as janelas vêm de f₀ e
+  P(s_ik ≤ s) = Φ((s − μ_0)/σ_0)^n_ik, que sobe com n_ik;
+- com canto (w_ik = 1), o máximo mistura janelas com e sem canto, e a
+  distribuição depende de quantas janelas têm canto, que o modelo da
+  ocasião não tem.
+
+Se f₀ e f₁ forem tratadas como a distribuição do próprio máximo, com
+parâmetros fixos, ocasiões com mais janelas parecem ter mais canto. Opções,
+**[decidir]**:
+
+1. f₀ do máximo exata (Φⁿ) e f₁ como a distribuição do máximo dado ao
+   menos uma janela com canto, com um parâmetro para a fração de janelas
+   com canto (aproxima a fase 4);
+2. f₀ e f₁ empíricas no máximo, com n_ik como covariável em **g**_ik;
+3. ir direto ao modelo por janela com `detections.csv` (fase 4), o
+   caminho de Rhinehart et al.
+
+A janela de independência também precisa ser conferida: janelas de 3 s
+sobrepostas não são independentes.
+
+### Identificação: o que Rhinehart et al. (2022) mostram
+
+Do texto principal e do material suplementar:
+
+- ~5% das simulações falharam com μ_0 ≈ μ_1 (diagnóstico:
+  ∣μ_1 − μ_0∣ < 0,1); 94% dessas falhas tinham ψ̂ entre 0,9 e 1;
+- mais falhas com θ baixo e poucas anotações positivas; bem menos com 72
+  anotações por sítio (10% dos arquivos);
+- a maioria das falhas veio do melhor classificador, atribuída ao valor
+  inicial μ_1 = 1, longe do verdadeiro (6); trocar os iniciais de
+  (0,5; 0,5) para (0; 1) reduziu as falhas à metade;
+- μ_1 > μ_0 é só assumido: as priors são independentes. No estudo de
+  covariáveis, 8% das cadeias não convergiram (R̂ ≥ 2), quase todas com o
+  melhor classificador e sem anotação.
+
+Consequências para o `fp_occu_score()`: impor a ordenação na
+parametrização (μ_1 = μ_0 + Δ_s, Δ_s > 0, como o gap do `fp_occu()`);
+tirar os valores iniciais da calibração do sheepdog; e simular o caso de θ
+baixo com poucas verificações positivas, que é o da espécie rara (ver
+`dev/verification-by-species/`).
 
 ### Relação com a calibração do sheepdog
 
@@ -399,12 +484,13 @@ Também é inferência minha; precisa de simulação (abaixo).
 
 | Passo | Pronto quando |
 |---|---|
-| `simulate_fp()` com scores: gerar s_ij de f₁/f₀ com covariáveis | os scores simulados reproduzem as curvas de precisão e recall da Fig. 3 do Curiango com parâmetros escolhidos à mão |
+| `simulate_fp()` com scores: gerar os scores por janela de f₀/f₁ com covariáveis e tomar o máximo por ocasião | os scores simulados reproduzem as curvas de precisão e recall da Fig. 3 do Curiango com parâmetros escolhidos à mão |
+| Distribuição do máximo: comparar as opções 1–3 com n_ik variando entre ocasiões | escolha documentada; viés em ψ e θ quando n_ik é ignorado |
 | Stan: verossimilhança por sítio marginalizando z e w (dois níveis de soma; com Markov, forward de dois estados dentro da noite) | log-densidade em R = Stan; com σ → 0 e limiar fixo, reduz-se ao modelo de Miller (conferir numericamente) |
 | `fp_occu_score()`: função nova; fórmulas `occ`, `det`, `score1`, `score0`; métodos `summary`, `predict`, `loo`, `fp_ppc` (incluindo o PPC dos scores) | testes de recuperação e SBC uniforme, como no `fp_occu()` |
 | Simulação da ignorabilidade: validação aleatória × por score × "top", com f bem e mal especificada | tabela de viés e cobertura; vira uma vinheta |
 | Curiango, os dois classificadores, sem limiar | comparado por LOO e pela Fig. 4 do artigo; a hipótese é que os dois classificadores convirjam mais entre si do que nos caminhos com limiar |
-| Comparação com Rhinehart et al. (2022) e Ogawa et al. (2025) nos dados simulados | código deles reproduzido ou reimplementado; diferença documentada |
+| Comparação com Rhinehart et al. (2022) e Ogawa et al. (2025) nos dados simulados | código deles reproduzido ou reimplementado (Rhinehart: NIMBLE, `models.R` no Dryad, 10.5061/dryad.ns1rn8ptd; Ogawa: JAGS, Zenodo, 10.5281/zenodo.12802535); diferença documentada. A prior de μ_1 de Rhinehart et al. é N(1, 10⁴) no texto principal e N(0, 10000) no material suplementar |
 
 **Critério de sucesso** (decide se a fase vale um artigo): no Curiango, a
 diferença entre os dois classificadores nos coeficientes de ocupação fica
@@ -612,6 +698,9 @@ direção (o classificador local deixou os caminhos mais parecidos).
 - **Identificação.** Com poucas verificações, f₁/f₀, θ e ψ competem pelas
   mesmas detecções. O gap ajuda; medir em simulação quanta verificação é
   necessária antes de documentar, como foi feito com o `random_fp`.
+  Rhinehart et al. (2022) já mostram o padrão de falha (μ_0 ≈ μ_1 com ψ̂
+  perto de 1, pior com θ baixo e poucas anotações positivas); ver
+  "Identificação" na fase 2.
 - **Custo.** Marginalizar w dentro da noite com Markov, em 1.700 noites
   × 56 ocasiões, é caro. Medir no Curiango cedo; o `reduce_sum` e as
   tuplas do crywolf 1.7 ajudam.
@@ -639,7 +728,9 @@ direção (o classificador local deixou os caminhos mais parecidos).
 ## Referências verificadas
 
 Conferidas no Crossref, no Undermind ou no Scholar Gateway em 24/10/2026.
-Os preprints foram lidos só pelo abstract.
+Os preprints foram lidos só pelo abstract. Rhinehart et al. (2022), com o
+material suplementar, e Ogawa et al. (2025) foram lidos no texto completo
+em 02/11/2026.
 
 - Chambert, T., Miller, D. A. W., & Nichols, J. D. (2015). Modeling false
   positive detections in species occurrence data under different study
