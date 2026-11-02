@@ -12,7 +12,8 @@ read_selection_tables(
 \arguments{
 \item{data_dir}{Root folder, searched recursively.}
 
-\item{table_pattern}{Regular expression for the table file names.}
+\item{table_pattern}{Regular expression for the table file names. The
+default matches only the combined table written by the BirdNET GUI.}
 }
 \value{
 A tibble with one row per prediction, the column \code{site} first,
@@ -28,6 +29,16 @@ contains it. The \code{output_} prefix of BirdNET output folders is removed, so
 \verb{output_UEM/} becomes site \code{UEM}.
 }
 \details{
+sheepdog reads the \strong{combined} table of each site, one
+\code{BirdNET_SelectionTable.txt} per site folder. The BirdNET GUI writes one
+selection table per audio file by default; the combined table is written
+when "Combine selection tables" is checked in the output settings (result
+type "Raven selection table"). Run BirdNET once per site, so that each
+site folder gets its own combined table. Tables of single audio files are
+not read: they do not match the default \code{table_pattern}, and the site is
+taken from the folder that holds the table. When no combined table is
+found but other selection tables are, the error says so.
+
 Column names are standardised to lower case without units or punctuation,
 e.g. \verb{Begin Time (s)} becomes \code{begin_time} and \verb{File Offset (s)} becomes
 \code{file_offset}.

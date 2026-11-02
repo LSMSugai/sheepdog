@@ -19,3 +19,11 @@ test_that("read_selection_tables() fails when nothing is found", {
   expect_error(read_selection_tables(withr::local_tempdir()),
                "No selection table")
 })
+
+test_that("read_selection_tables() points to the combined table", {
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "SITE"))
+  writeLines("Selection\tBegin Time (s)",
+             file.path(d, "SITE", "rec_20220101_200000.BirdNET.selection.table.txt"))
+  expect_error(read_selection_tables(d), "Combine selection tables")
+})

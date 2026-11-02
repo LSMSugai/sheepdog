@@ -1,5 +1,10 @@
 # sheepdog (development version)
 
+- `read_selection_tables()` documents that it reads one combined table per
+  site (`BirdNET_SelectionTable.txt`, written by the BirdNET GUI when
+  "Combine selection tables" is checked), not the per-audio tables the GUI
+  writes by default. When the folder holds only other selection tables, the
+  error now says so. The vignettes say where the combined table comes from.
 - `export_occupancy_data(species = )` now filters by the species asked
   for. The argument was masked by the `species` column of the predictions,
   so any value left no prediction and stopped the export. `select_clips()`

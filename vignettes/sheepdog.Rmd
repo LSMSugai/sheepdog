@@ -24,12 +24,18 @@ library(sheepdog)
 ## Example data
 
 The package ships a small simulated data set: BirdNET selection tables
-(Raven format) of several sites recorded from October 2021 to March 2022,
+(Raven format), one combined table per site, of several sites recorded from October 2021 to March 2022,
 with predictions of a custom classifier for anuran species. False-positive rates vary among species and sites, and the
 confidence scores of false positives overlap those of true detections. The
 generator is `data-raw/make_example_data.R` in the source repository. The
 `Begin Path` column points to recordings on a fictitious network drive
 (`N:\pam\audio\...`); the audio files themselves are not distributed.
+
+sheepdog reads one combined selection table per site. The BirdNET GUI
+writes one table per audio file by default; to get the combined
+`BirdNET_SelectionTable.txt`, run BirdNET once per site with "Raven
+selection table" as the result type and "Combine selection tables" checked
+in the output settings. Tables of single audio files are not read.
 
 ```{r}
 ex <- system.file("extdata", "example", package = "sheepdog")

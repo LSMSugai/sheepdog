@@ -26,7 +26,10 @@ library(sheepdog)
 ## Stage 1a: clips to validate
 
 Each site folder holds a `BirdNET_SelectionTable.txt` that concatenates the
-predictions of the custom classifier on every recording of the site. The
+predictions of the custom classifier on every recording of the site. It is
+written by the BirdNET GUI when "Combine selection tables" is checked in the
+output settings; by default the GUI writes one table per audio file, which
+sheepdog does not read. The
 recordings live on a NAS mapped as `N:/` on Windows; on a Mac the same paths
 are remapped.
 

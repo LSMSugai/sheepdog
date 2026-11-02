@@ -6,12 +6,23 @@
 #' contains it. The `output_` prefix of BirdNET output folders is removed, so
 #' `output_UEM/` becomes site `UEM`.
 #'
+#' sheepdog reads the **combined** table of each site, one
+#' `BirdNET_SelectionTable.txt` per site folder. The BirdNET GUI writes one
+#' selection table per audio file by default; the combined table is written
+#' when "Combine selection tables" is checked in the output settings (result
+#' type "Raven selection table"). Run BirdNET once per site, so that each
+#' site folder gets its own combined table. Tables of single audio files are
+#' not read: they do not match the default `table_pattern`, and the site is
+#' taken from the folder that holds the table. When no combined table is
+#' found but other selection tables are, the error says so.
+#'
 #' Column names are standardised to lower case without units or punctuation,
 #' e.g. `Begin Time (s)` becomes `begin_time` and `File Offset (s)` becomes
 #' `file_offset`.
 #'
 #' @param data_dir Root folder, searched recursively.
-#' @param table_pattern Regular expression for the table file names.
+#' @param table_pattern Regular expression for the table file names. The
+#'   default matches only the combined table written by the BirdNET GUI.
 #'
 #' @return A tibble with one row per prediction, the column `site` first,
 #'   followed by the standardised table columns. The columns `begin_time`,
@@ -23,8 +34,16 @@ read_selection_tables <- function(data_dir,
   tabelas <- list.files(data_dir, pattern = table_pattern,
                         recursive = TRUE, full.names = TRUE)
   if (length(tabelas) == 0) {
+    outras <- list.files(data_dir, pattern = "(?i)selection.?table.*\\.txt$",
+                         recursive = TRUE)
+    dica <- if (length(outras) > 0) {
+      paste0("\n", length(outras), " other selection table(s) found, e.g. ",
+             outras[1], ". sheepdog reads one combined table per site: ",
+             "in the BirdNET GUI, check \"Combine selection tables\" in ",
+             "the output settings.")
+    } else ""
     stop("No selection table found in ", data_dir, " matching ",
-         table_pattern)
+         table_pattern, dica)
   }
   message(length(tabelas), " selection table(s) found:")
   walk(tabelas, \(x) message("  - ", x))
