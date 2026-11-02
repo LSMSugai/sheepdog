@@ -283,3 +283,18 @@ test_that("the default selection uses log-loss rather than AUC ranking", {
                "stop after selection")
   expect_identical(selected, calibration_models()$m1_species_intercept)
 })
+
+test_that("calibrate() writes the score thresholds equivalent to p_min", {
+  skip_if_not_installed("lme4")
+  saida <- withr::local_tempdir()
+  res <- suppressWarnings(rodar_calibracao(saida, p_min = 0.9))
+  expect_true(file.exists(file.path(saida, "thresholds.csv")))
+  esperado <- calibrated_thresholds(res$fit, target = 0.9,
+                                    scored = res$scored)
+  expect_equal(res$thresholds, esperado)
+  lido <- readr::read_csv(file.path(saida, "thresholds.csv"),
+                          show_col_types = FALSE)
+  expect_equal(nrow(lido), nrow(esperado))
+  expect_setequal(paste(lido$site, lido$species),
+                  paste(res$scored$site, res$scored$species))
+})

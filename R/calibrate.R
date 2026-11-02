@@ -852,6 +852,11 @@ plot_calibration <- function(fit, validations, min_confidence = 0.1,
 #'   `TRUE`;
 #' * `calibrated_detections_<site>.csv`, one per site
 #'   ([score_detections()]);
+#' * `thresholds.csv` ([calibrated_thresholds()] with
+#'   `rule = "probability"` and `target = p_min`): for each site x species,
+#'   the lowest confidence score at which P(TP) reaches `p_min`, the score
+#'   equivalent of the cut on P(TP) used by the detection history. Useful to
+#'   filter detections in software that only takes a score threshold;
 #' * `nightly_detection_history.csv` ([detection_history()]);
 #' * `detection_summary.csv` ([summarise_history()]).
 #'
@@ -909,8 +914,8 @@ plot_calibration <- function(fit, validations, min_confidence = 0.1,
 #' @param effort_n,effort_reps Training sizes and repetitions of the
 #'   effort curve.
 #'
-#' @return A list with `comparison`, `fit`, `effort` (or `NULL`), `scored`
-#'   and `history`, invisibly.
+#' @return A list with `comparison`, `fit`, `effort` (or `NULL`), `scored`,
+#'   `thresholds` and `history`, invisibly.
 #' @export
 calibrate <- function(validation_files, prediction_tables, output_dir,
                       site_map = NULL, min_confidence = 0.1, p_min = 0.95,
@@ -988,6 +993,19 @@ calibrate <- function(validation_files, prediction_tables, output_dir,
 
   pontuadas <- score_detections(prediction_tables, fit_final,
                                 min_confidence, dawn_hour, p_min = p_min)
+  # limiar de score equivalente ao corte p_min em P(TP), por celula
+  limiares <- tryCatch(
+    calibrated_thresholds(fit_final, target = p_min,
+                          scored = if (nrow(pontuadas) > 0) pontuadas,
+                          min_confidence = min_confidence),
+    error = function(e) {
+      message("thresholds.csv was not written: ", conditionMessage(e))
+      NULL
+    })
+  if (!is.null(limiares)) {
+    write_csv(limiares, file.path(output_dir, "thresholds.csv"))
+  }
+
   historico <- NULL
   if (nrow(pontuadas) > 0) {
     walk(split(pontuadas, pontuadas$site, drop = TRUE), function(d) {
@@ -1011,5 +1029,6 @@ calibrate <- function(validation_files, prediction_tables, output_dir,
           "the column 'detection' uses k = ", min_detections_night,
           "; detection_k1/k2/k3 give the sensitivity to the rule.")
   invisible(list(comparison = cv, fit = fit_final, effort = esforco,
-                 scored = pontuadas, history = historico))
+                 scored = pontuadas, thresholds = limiares,
+                 history = historico))
 }
