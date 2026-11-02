@@ -87,3 +87,26 @@ test_that("score columns are the same from a folder and from the table", {
                as.data.frame(read_score_columns(comb)),
                ignore_attr = TRUE)
 })
+
+test_that("empty per-audio tables are skipped with a warning", {
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "ARA"))
+  file.create(file.path(d, "ARA", c("a.BirdNET.selection.table.txt",
+                                    "b.BirdNET.selection.table.txt")))
+  expect_error(
+    expect_warning(suppressMessages(read_selection_tables(d)), "Empty table"),
+    "No prediction read")
+})
+
+test_that("read_score_columns() handles empty and nested folders", {
+  comb <- file.path(sim_root(), "tabelas", "output_ARA",
+                    "BirdNET_SelectionTable.txt")
+  vazia <- withr::local_tempdir()
+  expect_null(read_score_columns(vazia))
+  file.create(file.path(vazia, "a.BirdNET.selection.table.txt"))
+  expect_null(suppressWarnings(read_score_columns(vazia)))
+  d <- withr::local_tempdir()
+  split_per_audio(comb, file.path(d, "um"))
+  split_per_audio(comb, file.path(d, "dois"))
+  expect_error(read_score_columns(d), "one folder per site")
+})
