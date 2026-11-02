@@ -42,7 +42,9 @@ when "Combine selection tables" is checked in the output settings
 \verb{<audio file>.BirdNET.selection.table.txt}. The tables of a folder are
 stacked in the order of their file names, and the \code{Selection} column
 is renumbered from 1, as in the combined table. The tables have the
-same columns as the combined one.
+same columns as the combined one; in them, \verb{Begin Time (s)} counts
+from the start of the audio file, like \verb{File Offset (s)}, which is
+the column sheepdog uses to place a detection.
 }
 
 Run BirdNET once per site, so that the tables of each site end up in

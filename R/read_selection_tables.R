@@ -15,7 +15,9 @@
 #'   `<audio file>.BirdNET.selection.table.txt`. The tables of a folder are
 #'   stacked in the order of their file names, and the `Selection` column
 #'   is renumbered from 1, as in the combined table. The tables have the
-#'   same columns as the combined one.
+#'   same columns as the combined one; in them, `Begin Time (s)` counts
+#'   from the start of the audio file, like `File Offset (s)`, which is
+#'   the column sheepdog uses to place a detection.
 #'
 #' Run BirdNET once per site, so that the tables of each site end up in
 #' their own folder: per-audio tables in subfolders of a site folder would be

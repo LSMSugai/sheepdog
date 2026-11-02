@@ -110,3 +110,38 @@ test_that("read_score_columns() handles empty and nested folders", {
   split_per_audio(comb, file.path(d, "dois"))
   expect_error(read_score_columns(d), "one folder per site")
 })
+
+test_that("per-audio tables in the format of the BirdNET GUI are read", {
+  # cabecalho, ordem das colunas e formato dos numeros de uma tabela real
+  # por audio do BirdNET GUI (Common Name antes de Species Code, tempos com
+  # uma casa decimal, Begin Time igual a File Offset); valores inventados
+  cab <- paste("Selection", "View", "Channel", "Begin Time (s)",
+               "End Time (s)", "Low Freq (Hz)", "High Freq (Hz)",
+               "Common Name", "Species Code", "Confidence", "Begin Path",
+               "File Offset (s)", sep = "\t")
+  linha <- function(sel, t0, nome, cod, conf, audio) {
+    paste(sel, "Spectrogram 1", 1, sprintf("%.1f", t0),
+          sprintf("%.1f", t0 + 3), 0, 15000, nome, cod,
+          sprintf("%.4f", conf), paste0("/Volumes/audio/", audio, ".flac"),
+          sprintf("%.1f", t0), sep = "\t")
+  }
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "Campus01"))
+  a1 <- "Campus01_20261003_074339"
+  a2 <- "Campus01_20261003_084339"
+  writeLines(c(cab, linha(1, 0, "Sayaca Tanager", "saytan1", 0.5603, a1),
+               linha(2, 8, "Rufous-collared Sparrow", "rucspa1", 0.2303, a1)),
+             file.path(d, "Campus01", paste0(a1, ".BirdNET.selection.table.txt")))
+  writeLines(c(cab, linha(1, 12, "Sayaca Tanager", "saytan1", 0.9230, a2)),
+             file.path(d, "Campus01", paste0(a2, ".BirdNET.selection.table.txt")))
+  pred <- suppressMessages(read_selection_tables(d))
+  expect_identical(nrow(pred), 3L)
+  expect_identical(pred$selection, 1:3)
+  expect_identical(unique(pred$site), "Campus01")
+  expect_identical(pred$species_code, c("saytan1", "rucspa1", "saytan1"))
+  expect_equal(pred$file_offset, c(0, 8, 12))
+  expect_type(pred$confidence, "double")
+  m <- suppressMessages(select_clips(pred, n_top = 1))
+  expect_setequal(m$recording_hour, c("07", "08"))
+  expect_true(all(m$recording_date == "20261003"))
+})
