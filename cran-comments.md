@@ -1,8 +1,16 @@
-## Submission candidate
+## Resubmission
 
-Prepared for an initial CRAN submission of sheepdog 3.3.2, which
-replaces the 3.3.1, 3.3.0 and 3.2.1 candidates (never uploaded).
-This file does not imply that a submission has already been uploaded.
+This is a resubmission of sheepdog 3.3.2 (version 3.3.3). In response to
+the review by Uwe Ligges:
+
+- https://stan-dev.r-universe.dev was removed from
+  Additional_repositories; sheepdog does not need it. Only
+  https://diogoprov.r-universe.dev (for crywolf, in Suggests) remains.
+- The Description field now cites the methods the package implements, in
+  the form Authors (year) <doi:...>: Miller et al. (2011), Chambert et al.
+  (2015) and Wood and Kahl (2024).
+
+The package code is unchanged from 3.3.2.
 
 ## Test environment
 
@@ -29,12 +37,10 @@ Tests: 1585 passed; one optional test skipped (Stan integration).
 
 ## Optional repositories
 
-crywolf is an optional Suggests dependency outside CRAN. Its repository
-and the repository supplying cmdstanr (a dependency of crywolf, not of
-sheepdog) are declared in Additional_repositories:
-https://diogoprov.r-universe.dev and https://stan-dev.r-universe.dev.
-Tests using optional dependencies are conditional. Stan fitting is opt-in
-and is not run by normal CRAN checks.
+crywolf is an optional Suggests dependency outside CRAN, available from
+the repository declared in Additional_repositories
+(https://diogoprov.r-universe.dev). Tests using optional dependencies are
+conditional. Stan fitting is opt-in and is not run by normal CRAN checks.
 
 ## Size and benchmark material
 
