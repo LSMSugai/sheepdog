@@ -11,7 +11,7 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
-`select_clips()` offers three sampling designs, set by `sampling_mode`.
+`select_clips()` offers three sampling designs to draw detections from, set by `sampling_mode`.
 They answer different questions, and a validation sample drawn for one
 purpose is generally not valid for another. This vignette states what each
 design is for, runs the three on the example data shipped with the package
@@ -25,7 +25,7 @@ and compares the clips they select.
 
 ## Example data
 
-The example consists of simulated BirdNET selection tables (Raven format)
+The example consists of simulated BirdNET selection tables (Raven Pro format)
 of anuran calls at several sites over six months (October 2021 to March
 2022), plus the list of every recording made (`recordings.csv`),
 including those without any prediction. The audio files do not exist:
