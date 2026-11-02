@@ -46,6 +46,10 @@ the rounding error is small next to the uncertainty of the calibration.
 Each detection then gets the posterior mean (\code{p_tp}), a lower quantile
 (\code{p_tp_lower}) and the posterior probability that P(TP) >= \code{p_min}
 (\code{pr_reliable}). \code{\link[=detection_history]{detection_history()}} can use either rule.}
+
+\item{lower_prob}{Models fitted with \code{engine = "brms"}: the probability of
+the lower quantile of the posterior of P(TP) used for
+\code{threshold_lower}.}
 }
 \value{
 A tibble with the cell columns, \code{threshold} and, for

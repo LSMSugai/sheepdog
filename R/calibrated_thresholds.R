@@ -59,6 +59,9 @@
 #'   `species` and any other variable of the calibration formula. By default,
 #'   the cells of `scored` or, without it, every site x species of the
 #'   calibration.
+#' @param lower_prob Models fitted with `engine = "brms"`: the probability of
+#'   the lower quantile of the posterior of P(TP) used for
+#'   `threshold_lower`.
 #' @inheritParams score_detections
 #'
 #' @return A tibble with the cell columns, `threshold` and, for
