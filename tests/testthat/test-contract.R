@@ -172,7 +172,8 @@ expect_contract <- function(dir) {
 }
 
 # Exports a conferir: o do exemplo (sem calibracao), um simulado com os tres
-# desenhos e as fixtures compartilhadas com o crywolf (1.1, 1.2 e 1.3)
+# desenhos e as fixtures compartilhadas com o crywolf (1.1, 1.2, 1.3 e a 1.3
+# multiespecies)
 export_exemplo <- function(env = parent.frame()) {
   ex <- system.file("extdata", "example", package = "sheepdog")
   dir <- withr::local_tempdir(.local_envir = env)
@@ -207,6 +208,36 @@ test_that("exports follow the documented contract", {
   sc <- expect_contract(fixture("export-1.3"))
   expect_identical(sc$schema_version, 1.3)
   expect_identical(sc$calibration$covariates, "temp_z")
+  sc <- expect_contract(fixture("export-1.3-ms"))
+  expect_identical(sc$schema_version, 1.3)
+  expect_length(sc$species, 3)
+})
+
+# Fixture multiespecies (fp_occu_ms() do crywolf): tres especies, uma rara
+# (lep_fus, so em ARA e BAI, com 15 clipes revisados por sitio)
+test_that("the multi-species fixture keeps every key by species", {
+  skip_if_not_installed("arrow")
+  dir <- fixture("export-1.3-ms")
+  sc <- jsonlite::read_json(file.path(dir, "schema.json"), simplifyVector = TRUE)
+  especies <- c("ela_bic", "lep_fus", "phy_cuv")
+  expect_identical(sort(sc$occasion_draws$species), especies)
+  expect_identical(sc$calibration$keys, c("site", "species"))
+  det <- ler_tabela(dir, "detections")
+  sco <- ler_tabela(dir, "scores")
+  val <- ler_tabela(dir, "validation")
+  od <- as.data.frame(arrow::read_parquet(file.path(dir, "occasion_draws.parquet")))
+  for (tab in list(det, sco, val, od)) {
+    expect_identical(sort(unique(tab$species)), especies)
+  }
+  # a especie rara fica nos sitios em que foi detectada
+  expect_identical(sort(unique(det$site[det$species == "lep_fus"])), c("ARA", "BAI"))
+  expect_identical(sort(unique(od$site[od$species == "lep_fus"])), c("ARA", "BAI"))
+  expect_identical(as.vector(table(val$site[val$species == "lep_fus"])), c(15L, 15L))
+  # todas as especies tem as mesmas versoes, cada uma com uma linha por
+  # ocasiao x especie pontuada
+  expect_true(all(tapply(od$draw, od$species, function(d) length(unique(d))) == 20))
+  chave <- paste(od$draw, od$site, od$occasion_id, od$species)
+  expect_false(anyDuplicated(chave) > 0)
 })
 
 test_that("occasion_draws() keeps an export within the contract", {
@@ -234,6 +265,7 @@ test_that("crywolf reads every export", {
                `1.1` = fixture("export-1.1"), `1.2` = fixture("export-1.2"))
   if (utils::packageVersion("crywolf") >= "2.1.0.9000") {
     dirs$`1.3` <- fixture("export-1.3")
+    dirs$`1.3-ms` <- fixture("export-1.3-ms")
   }
   for (nome in names(dirs)) {
     dir <- dirs[[nome]]
@@ -299,4 +331,19 @@ test_that("crywolf takes the versions of a calibration on covariates", {
   # outra semente pediria versoes que o export nao sorteou
   expect_error(suppressWarnings(crywolf::fp_draws_data(x, seed = 1)),
                "export it again")
+})
+
+# Multiespecies: ate o crywolf ler todas as especies juntas, cada especie e
+# lida a parte e tem as versoes do export
+test_that("crywolf reads each species of the multi-species fixture", {
+  skip_if_not_installed("arrow")
+  skip_if_not_installed("crywolf", minimum_version = "2.1.0.9000")
+  dir <- fixture("export-1.3-ms")
+  od <- as.data.frame(arrow::read_parquet(file.path(dir, "occasion_draws.parquet")))
+  for (sp in c("phy_cuv", "ela_bic", "lep_fus")) {
+    x <- suppressWarnings(crywolf::fp_read_sheepdog(dir, species = sp))
+    expect_true(all(x$detections$species == sp))
+    v <- suppressWarnings(crywolf::fp_draws_data(x))
+    expect_same_versions(v, od[od$species == sp, ])
+  }
 })

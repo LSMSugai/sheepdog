@@ -1,5 +1,13 @@
 # sheepdog (development version)
 
+- New fixture of the data contract, `tests/testthat/fixtures/export-1.3-ms`
+  (built by `data-raw/make_export_fixture_ms.R`), shared with crywolf for its
+  multi-species model: three species of the example data, one of them rare
+  (detected at two sites, 15 reviewed clips per site), with a calibration on
+  temperature and species and site x species effects. The contract tests
+  check that every table and the occasion versions keep their keys by
+  species, and that crywolf reads each species with the versions of the
+  export.
 - `dev/roadmap-integration.md`: CRAN submissions of sheepdog 3.3.2 and
   crywolf 2.1.0, and steps 5 to 7 of `crywolf::fp_occu_dyn()`.
 - `dev/roadmap-integration.md`: step 8 of `crywolf::fp_occu_dyn()` (blocked
