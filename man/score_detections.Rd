@@ -15,8 +15,10 @@ score_detections(
 )
 }
 \arguments{
-\item{tables}{Named character vector of selection-table paths, named by
-site (the site names of the calibration).}
+\item{tables}{Named character vector, named by site (the site names of
+the calibration): the path of the combined selection table of each
+site, or the folder of its per-audio tables (see
+\code{\link[=read_selection_tables]{read_selection_tables()}}).}
 
 \item{fit}{Model returned by \code{\link[=fit_calibration]{fit_calibration()}}.}
 
