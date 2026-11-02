@@ -103,8 +103,8 @@ recordings or nights by species or by outcome. Group IDs must be
 nonmissing and nonempty. \code{NULL} keeps the original clip folds.}
 }
 \value{
-A list with \code{comparison}, \code{fit}, \code{effort} (or \code{NULL}), \code{scored}
-and \code{history}, invisibly.
+A list with \code{comparison}, \code{fit}, \code{effort} (or \code{NULL}), \code{scored},
+\code{thresholds} and \code{history}, invisibly.
 }
 \description{
 Runs the whole calibration stage: reads the reviewed clips, compares the
@@ -124,6 +124,11 @@ installed;
 \code{TRUE};
 \item \verb{calibrated_detections_<site>.csv}, one per site
 (\code{\link[=score_detections]{score_detections()}});
+\item \code{thresholds.csv} (\code{\link[=calibrated_thresholds]{calibrated_thresholds()}} with
+\code{rule = "probability"} and \code{target = p_min}): for each site x species,
+the lowest confidence score at which P(TP) reaches \code{p_min}, the score
+equivalent of the cut on P(TP) used by the detection history. Useful to
+filter detections in software that only takes a score threshold;
 \item \code{nightly_detection_history.csv} (\code{\link[=detection_history]{detection_history()}});
 \item \code{detection_summary.csv} (\code{\link[=summarise_history]{summarise_history()}}).
 }
