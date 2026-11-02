@@ -5,7 +5,8 @@
 #' @import purrr
 #' @import stringr
 #' @import tidyr
-#' @importFrom readr read_csv read_tsv write_csv
+#' @importFrom readr col_character cols read_csv read_tsv type_convert
+#'   write_csv
 #' @importFrom stats setNames
 #' @importFrom tibble tibble
 NULL

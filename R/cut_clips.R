@@ -138,9 +138,11 @@ pack_clips <- function(manifest, output_dir) {
 #' }
 extract_validation_clips <- function(data_dir, output_dir, ...,
                                      table_pattern = "^BirdNET_SelectionTable\\.txt$",
+                                     per_audio_pattern = "\\.BirdNET\\.selection\\.table\\.txt$",
                                      make_zip = TRUE, simulate = FALSE,
                                      classifier = NULL) {
-  manifesto <- read_selection_tables(data_dir, table_pattern) |>
+  manifesto <- read_selection_tables(data_dir, table_pattern,
+                                     per_audio_pattern) |>
     select_clips(...) |>
     cut_clips(output_dir, simulate = simulate)
 

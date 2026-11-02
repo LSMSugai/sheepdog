@@ -9,6 +9,7 @@ extract_validation_clips(
   output_dir,
   ...,
   table_pattern = "^BirdNET_SelectionTable\\\\.txt$",
+  per_audio_pattern = "\\\\.BirdNET\\\\.selection\\\\.table\\\\.txt$",
   make_zip = TRUE,
   simulate = FALSE,
   classifier = NULL
@@ -23,7 +24,11 @@ extract_validation_clips(
 \code{sampling_mode}, \code{n_top}, \code{threshold}, \code{target_total}, \code{remap_from},
 \code{remap_to}).}
 
-\item{table_pattern}{Regular expression for the table file names.}
+\item{table_pattern}{Regular expression for the file names of combined
+tables.}
+
+\item{per_audio_pattern}{Regular expression for the file names of
+per-audio tables. \code{NULL} reads only combined tables.}
 
 \item{make_zip}{Zip one package per species (skipped when \code{simulate} is
 \code{TRUE}).}

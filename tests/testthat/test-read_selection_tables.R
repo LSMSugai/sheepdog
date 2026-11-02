@@ -20,10 +20,70 @@ test_that("read_selection_tables() fails when nothing is found", {
                "No selection table")
 })
 
-test_that("read_selection_tables() points to the combined table", {
+# Divide uma tabela combinada em tabelas por audio, como a GUI do BirdNET
+# grava sem "Combine selection tables": selection recomeca em 1 em cada
+# tabela. `vazio` acrescenta uma tabela so com o cabecalho.
+split_per_audio <- function(combinada, pasta, vazio = NULL) {
+  tab <- utils::read.delim(combinada, check.names = FALSE,
+                           stringsAsFactors = FALSE)
+  dir.create(pasta, recursive = TRUE, showWarnings = FALSE)
+  audio <- sub("^.*\\\\", "", tab[["Begin Path"]])
+  for (a in unique(audio)) {
+    parte <- tab[audio == a, ]
+    parte$Selection <- seq_len(nrow(parte))
+    utils::write.table(parte, file.path(pasta, paste0(
+      sub("\\.wav$", "", a), ".BirdNET.selection.table.txt")),
+      sep = "\t", quote = FALSE, row.names = FALSE)
+  }
+  if (!is.null(vazio)) {
+    utils::write.table(tab[0, ], file.path(pasta, paste0(
+      vazio, ".BirdNET.selection.table.txt")),
+      sep = "\t", quote = FALSE, row.names = FALSE)
+  }
+  invisible(unique(audio))
+}
+
+test_that("per-audio tables give the same result as the combined table", {
+  comb <- file.path(sim_root(), "tabelas", "output_ARA",
+                    "BirdNET_SelectionTable.txt")
   d <- withr::local_tempdir()
-  dir.create(file.path(d, "SITE"))
-  writeLines("Selection\tBegin Time (s)",
-             file.path(d, "SITE", "rec_20220101_200000.BirdNET.selection.table.txt"))
-  expect_error(read_selection_tables(d), "Combine selection tables")
+  # uma gravacao sem predicoes no meio da ordem dos arquivos
+  split_per_audio(comb, file.path(d, "output_ARA"),
+                  vazio = "ARA01_20220110_190000")
+  esperado <- suppressMessages(read_selection_tables(dirname(comb)))
+  obtido <- suppressMessages(read_selection_tables(d))
+  expect_identical(obtido$site, rep("ARA", nrow(obtido)))
+  expect_equal(as.data.frame(obtido), as.data.frame(esperado),
+               ignore_attr = TRUE)
+  expect_identical(obtido$selection, seq_len(nrow(obtido)))
+})
+
+test_that("a folder with a combined table ignores its per-audio tables", {
+  comb <- file.path(sim_root(), "tabelas", "output_ARA",
+                    "BirdNET_SelectionTable.txt")
+  d <- withr::local_tempdir()
+  split_per_audio(comb, file.path(d, "ARA"))
+  file.copy(comb, file.path(d, "ARA"))
+  expect_message(pred <- read_selection_tables(d), "ignored")
+  esperado <- suppressMessages(read_selection_tables(dirname(comb)))
+  expect_identical(nrow(pred), nrow(esperado))
+})
+
+test_that("per_audio_pattern = NULL reads only combined tables", {
+  comb <- file.path(sim_root(), "tabelas", "output_ARA",
+                    "BirdNET_SelectionTable.txt")
+  d <- withr::local_tempdir()
+  split_per_audio(comb, file.path(d, "ARA"))
+  expect_error(read_selection_tables(d, per_audio_pattern = NULL),
+               "per_audio_pattern")
+})
+
+test_that("score columns are the same from a folder and from the table", {
+  comb <- file.path(sim_root(), "tabelas", "output_ARA",
+                    "BirdNET_SelectionTable.txt")
+  d <- withr::local_tempdir()
+  split_per_audio(comb, d)
+  expect_equal(as.data.frame(read_score_columns(d)),
+               as.data.frame(read_score_columns(comb)),
+               ignore_attr = TRUE)
 })

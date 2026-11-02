@@ -25,8 +25,9 @@ library(sheepdog)
 A pasta de cada local contém um `BirdNET_SelectionTable.txt` que concatena as
 predições do classificador customizado em todas as gravações do local. Ele é
 gravado pela GUI do BirdNET quando a opção "Combine selection tables" está
-marcada nas configurações de saída; por padrão, a GUI grava uma tabela por
-arquivo de áudio, que o sheepdog não lê. As
+marcada nas configurações de saída. Por padrão, a GUI grava uma tabela por
+arquivo de áudio; o sheepdog também lê essas tabelas e empilha as de cada
+pasta de local. As
 gravações ficam em um NAS mapeado como `N:/` no Windows; no Mac, os mesmos
 caminhos são remapeados.
 

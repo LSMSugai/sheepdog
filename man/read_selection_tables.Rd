@@ -6,14 +6,18 @@
 \usage{
 read_selection_tables(
   data_dir,
-  table_pattern = "^BirdNET_SelectionTable\\\\.txt$"
+  table_pattern = "^BirdNET_SelectionTable\\\\.txt$",
+  per_audio_pattern = "\\\\.BirdNET\\\\.selection\\\\.table\\\\.txt$"
 )
 }
 \arguments{
 \item{data_dir}{Root folder, searched recursively.}
 
-\item{table_pattern}{Regular expression for the table file names. The
-default matches only the combined table written by the BirdNET GUI.}
+\item{table_pattern}{Regular expression for the file names of combined
+tables.}
+
+\item{per_audio_pattern}{Regular expression for the file names of
+per-audio tables. \code{NULL} reads only combined tables.}
 }
 \value{
 A tibble with one row per prediction, the column \code{site} first,
@@ -22,22 +26,29 @@ followed by the standardised table columns. The columns \code{begin_time},
 are required.
 }
 \description{
-Finds every BirdNET selection table (Raven format, tab-separated) under
-\code{data_dir}, reads them and stacks them in one table. Each table holds the
-predictions of one site, and the site is the name of the folder that
-contains it. The \code{output_} prefix of BirdNET output folders is removed, so
-\verb{output_UEM/} becomes site \code{UEM}.
+Finds the BirdNET selection tables (Raven format, tab-separated) under
+\code{data_dir}, reads them and stacks them in one table. The site is the name
+of the folder that contains the tables. The \code{output_} prefix of BirdNET
+output folders is removed, so \verb{output_UEM/} becomes site \code{UEM}.
 }
 \details{
-sheepdog reads the \strong{combined} table of each site, one
-\code{BirdNET_SelectionTable.txt} per site folder. The BirdNET GUI writes one
-selection table per audio file by default; the combined table is written
-when "Combine selection tables" is checked in the output settings (result
-type "Raven selection table"). Run BirdNET once per site, so that each
-site folder gets its own combined table. Tables of single audio files are
-not read: they do not match the default \code{table_pattern}, and the site is
-taken from the folder that holds the table. When no combined table is
-found but other selection tables are, the error says so.
+The BirdNET GUI writes the Raven selection tables in one of two ways, and
+both are read:
+\itemize{
+\item \strong{combined}: one \code{BirdNET_SelectionTable.txt} per site folder, written
+when "Combine selection tables" is checked in the output settings
+(result type "Raven selection table");
+\item \strong{one table per audio file} (the default of the GUI), named
+\verb{<audio file>.BirdNET.selection.table.txt}. The tables of a folder are
+stacked in the order of their file names, and the \code{Selection} column
+is renumbered from 1, as in the combined table. The tables have the
+same columns as the combined one.
+}
+
+Run BirdNET once per site, so that the tables of each site end up in
+their own folder: per-audio tables in subfolders of a site folder would be
+read as separate sites. A folder that holds a combined table is read from
+it alone, and its per-audio tables are ignored, with a message.
 
 Column names are standardised to lower case without units or punctuation,
 e.g. \verb{Begin Time (s)} becomes \code{begin_time} and \verb{File Offset (s)} becomes
