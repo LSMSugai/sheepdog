@@ -1,5 +1,9 @@
 # sheepdog (development version)
 
+- `export_occupancy_data(species = )` now filters by the species asked
+  for. The argument was masked by the `species` column of the predictions,
+  so any value left no prediction and stopped the export. `select_clips()`
+  uses the same filter and is protected the same way.
 - `export_occupancy_data()` gains `min_verified` (default 10) and warns
   about species with predictions but fewer reviewed detection clips, or
   without any positive or any negative clip: their false-positive rates

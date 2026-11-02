@@ -201,7 +201,7 @@ export_occupancy_data <- function(output_dir, detections, recordings = NULL,
            source_audio = remap_path(begin_path, remap_from, remap_to),
            occasion_id = make_occasion_id(source_audio, file_offset, unidade))
   if (!is.null(species)) {
-    det <- filter(det, str_extract(species_code, "[^_]+$") %in% species)
+    det <- filter(det, str_extract(species_code, "[^_]+$") %in% .env$species)
   }
   if (nrow(det) == 0) stop("No prediction with confidence >= ", min_confidence, ".")
   det <- check_duplicate_predictions(det)

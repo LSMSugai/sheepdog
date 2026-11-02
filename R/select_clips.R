@@ -226,7 +226,7 @@ select_clips <- function(detections,
   if (!is.null(species)) {
     antes   <- nrow(selecao)
     selecao <- filter(selecao,
-                      str_extract(species_code, "[^_]+$") %in% species)
+                      str_extract(species_code, "[^_]+$") %in% .env$species)
     message("Filter of ", length(species), " species: ", antes, " -> ",
             nrow(selecao), " predictions.")
     faltantes <- setdiff(species,

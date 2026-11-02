@@ -175,6 +175,15 @@ test_that("one score copied to several rows of an occasion is reported", {
   expect_no_warning(export_sim())
 })
 
+# O filtro `species` usa o argumento, nao a coluna species das predicoes
+test_that("`species` restricts the export to the species asked for", {
+  pred <- sim_pred()
+  curto <- sub(".*_", "", sim_especies[2])
+  ex <- export_sim(species = curto)
+  expect_identical(unique(ex$tables$detections$species_code), sim_especies[2])
+  expect_identical(as.character(ex$schema$species), sim_especies[2])
+})
+
 # Especie com poucos clipes revisados: a taxa de falso positivo dela nao
 # vem dos dados dela
 test_that("species with few reviewed clips are named in a warning", {
