@@ -175,6 +175,29 @@ test_that("one score copied to several rows of an occasion is reported", {
   expect_no_warning(export_sim())
 })
 
+# Especie com poucos clipes revisados: a taxa de falso positivo dela nao
+# vem dos dados dela
+test_that("species with few reviewed clips are named in a warning", {
+  pred <- sim_pred()
+  val <- sim_validation(pred)
+  rara <- sim_especies[1]
+  sp_rara <- folder_name(rara)
+  n_rara <- sum(val$species_code == rara & val$verdict %in% c("positive", "negative"))
+  # sem clipe da especie: aparece com 0
+  sem <- dplyr::filter(val, species_code != rara)
+  expect_warning(export_sim(validation = sem),
+                 paste0(sp_rara, " \\(0: 0\\+ 0-\\)"))
+  # so negativos da especie
+  neg <- dplyr::mutate(val, verdict = ifelse(species_code == rara &
+                                               verdict == "positive",
+                                             "negative", verdict))
+  expect_warning(export_sim(validation = neg), paste0(sp_rara, " \\(", n_rara, ": 0\\+"))
+  # o minimo e ajustavel; abaixo dele, nenhum aviso
+  expect_warning(export_sim(validation = val, min_verified = n_rara + 1),
+                 sp_rara)
+  expect_no_warning(export_sim(validation = val, min_verified = 1))
+})
+
 test_that("invalid inputs are refused", {
   pred <- sim_pred()
   expect_error(export_occupancy_data(withr::local_tempdir(),

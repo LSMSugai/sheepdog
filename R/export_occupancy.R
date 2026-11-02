@@ -129,6 +129,12 @@
 #'   for `(temp_raw - 22.4) / 3.1`. It is written to `schema.json` so that
 #'   a reader can map the covariate back; the values of
 #'   `occasion_covariates` must already be on the scale of the model.
+#' @param min_verified Species with predictions but fewer than this
+#'   number of reviewed detection clips (positive or negative), or without
+#'   any positive or any negative clip, are named in a warning: their
+#'   false-positive rate will rest on the other species (a community
+#'   model) or on the prior. The default is a floor, not a sample size
+#'   calculation. Only used with `validation`.
 #' @param classifier Optional label of the classifier, recorded in
 #'   `schema.json`.
 #' @param overwrite Replace an existing export in `output_dir`?
@@ -153,6 +159,7 @@ export_occupancy_data <- function(output_dir, detections, recordings = NULL,
                                   p_min = 0.95, covariate_scaling = NULL,
                                   audio_pattern = "\\.(wav|flac|mp3)$",
                                   remap_from = NULL, remap_to = NULL,
+                                  min_verified = 10,
                                   classifier = NULL, overwrite = FALSE) {
   unidade <- match.arg(occasion_unit)
   rule <- match.arg(rule)
@@ -240,6 +247,8 @@ export_occupancy_data <- function(output_dir, detections, recordings = NULL,
   )
   if (!is.null(validation)) {
     tabelas <- c(tabelas, export_validation(validation, ocasioes))
+    check_verification_by_species(tabelas$validation, unique(det$species),
+                                  min_verified)
   }
   tabelas$sites <- export_sites(sites, unique(ocasioes$site))
 
@@ -628,6 +637,26 @@ export_validation <- function(validation, ocasioes) {
       arrange(site, occasion_id, species_code)
   }
   out
+}
+
+# Clipes revisados por especie: com poucos, ou sem positivo ou sem
+# negativo, a taxa de falso positivo da especie nao vem dos dados dela
+check_verification_by_species <- function(validation, especies, min_verified) {
+  por_sp <- tibble(species = especies) |>
+    left_join(validation |> filter(!is.na(tp)) |>
+                group_by(species) |>
+                summarise(n = n(), pos = sum(tp), .groups = "drop"),
+              by = "species") |>
+    mutate(n = coalesce(n, 0L), pos = coalesce(pos, 0L), neg = n - pos) |>
+    filter(n < min_verified | pos == 0 | neg == 0) |>
+    arrange(n, species)
+  if (nrow(por_sp) == 0) return(invisible())
+  warning(nrow(por_sp), " species with fewer than ", min_verified,
+          " reviewed clips, or without a positive or a negative one: ",
+          paste0(por_sp$species, " (", por_sp$n, ": ", por_sp$pos, "+ ",
+                 por_sp$neg, "-)", collapse = ", "),
+          ". Their false-positive rates will rest on the other species ",
+          "(a community model) or on the prior.", call. = FALSE)
 }
 
 # Covariaveis de local; os locais sem linha ficam com NA

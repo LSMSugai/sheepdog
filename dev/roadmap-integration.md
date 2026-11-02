@@ -470,11 +470,19 @@ Mas nenhum dos dois lados testa isso hoje: as fixtures `export-1.1` a
 |---|---|---|
 | Fixture `export-1.3-ms`: três espécies, uma delas rara (poucas detecções e poucos clipes verificados), com calibração por espécie (feita em 02/11/2026, sheepdog#74) | sheepdog | `test-contract.R` confere as chaves por espécie; a cópia no crywolf é idêntica (`dev/check-sheepdog-fixture.R`) |
 | Leitura de todas as espécies: `fp_read_sheepdog(species = NULL)` → `fp_data()` em formato longo (passo "Dados" da Fase A) | crywolf | `print()` e os avisos de desenho por espécie sobre a fixture |
-| Verificação por espécie: conferir quantos clipes verificados cada espécie recebe com `target_total` (divisão igual entre espécies) e com `random_recordings` (cada gravação revisada para todas as espécies); avisar quando uma espécie fica abaixo de um mínimo | sheepdog | simulação com uma espécie rara; aviso no `select_clips()` ou no `export_occupancy_data()` |
+| Verificação por espécie: conferir quantos clipes verificados cada espécie recebe com `target_total` (divisão igual entre espécies) e com `random_recordings` (cada gravação revisada para todas as espécies); avisar quando uma espécie fica abaixo de um mínimo (feito em 02/11/2026: `dev/verification-by-species/` e `min_verified` no export) | sheepdog | simulação com uma espécie rara; aviso no `select_clips()` ou no `export_occupancy_data()` |
 | Export multiespécies do FrogNet (DiverSons), fora dos repositórios dos pacotes (em `frognetUFMS/analysis`), como caso real do `fp_occu_ms()` | os dois | export lido pelo crywolf; ajuste com as 16 espécies; resultados pré-computados na vinheta depois do depósito dos dados |
 
 O risco apontado no crywolf (verificação rara demais nas espécies raras) é
-o que o terceiro passo mede do lado do desenho.
+o que o terceiro passo mede do lado do desenho. Resultado
+(`dev/verification-by-species/README.md`): com uma espécie de 15
+detecções num só sítio, o `top` não passa de 15 clipes verificados com
+qualquer `target_total`, o `random_detections` com limiar 0,5 fica com 1
+e o `random_recordings` dá ~0 positivos com qualquer fração. Nenhum
+desenho resolve sozinho: a taxa de falso positivo da espécie rara vem da
+comunidade ou da priori, e o `export_occupancy_data()` agora nomeia essas
+espécies num aviso (`min_verified = 10`, ou nenhum positivo ou nenhum
+negativo).
 
 **Dados reais (decidido em 02/11/2026): o FrogNet.** O Curiango é uma
 espécie só. O VicFrogNET (Zenodo 10.5281/zenodo.17773400, CC BY 4.0) foi
