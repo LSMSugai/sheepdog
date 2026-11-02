@@ -1,6 +1,6 @@
 Package: sheepdog
 Title: Sample, Validate and Calibrate 'BirdNET' Detections
-Version: 3.3.3
+Version: 3.3.3.9000
 Authors@R: c(
     person("Diogo B.", "Provete", , "dbprovete@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-0097-0651")),

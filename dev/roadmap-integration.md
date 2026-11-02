@@ -62,10 +62,18 @@ verdadeiros e dos falsos positivos sem depender do classificador.
 
 ## Estado (01/11/2026)
 
-- 01/11/2026: **sheepdog 3.3.0 lançado** (tag `v3.3.0`), com as fases 0 e
-  1, o app local (revisão, sorteio e export) e o retreino por noite. É a
-  nova candidata ao CRAN, no lugar da 3.2.1 (nunca enviada); a submissão
-  espera o DOI do artigo do JAV resolver (NOTE de URL 404).
+- 01/11/2026: **sheepdog e crywolf enviados ao CRAN.** O crywolf 2.1.0
+  passou no pré-teste (1 NOTE: submissão nova, cmdstanr e sheepdog nos
+  `Additional_repositories`) e espera a revisão manual. O sheepdog foi
+  enviado como 3.3.2 (tag `v3.3.2`), igual à 3.3.0 (fases 0 e 1, app local,
+  retreino por noite) com duas correções: a vinheta `crywolf-integration`
+  cita o artigo do JAV sem o DOI, que vai demorar (o artigo está em
+  espera na revista), na 3.3.1 (sheepdog#71); e o `occasion_draws()` lê o
+  parquet sem `mmap`, que travava o arquivo no Windows e derrubava um
+  teste no win-builder, na 3.3.2 (sheepdog#72). A 3.3.0 e a 3.3.1 nunca
+  foram enviadas. Win-builder (R-devel) e `--as-cran` local, com e sem o
+  crywolf: só a NOTE de submissão nova. O DOI do JAV volta numa versão
+  seguinte, quando resolver.
 - 01/11/2026: **fase 1 completa.** As duas análises "dev" rodaram no
   Curiango com *M* = 50 (100 ajustes convergidos). Regra de *M*: o erro de
   Monte Carlo da média é sqrt(share_between / *M*) do DP posterior, então
@@ -103,24 +111,48 @@ verdadeiros e dos falsos positivos sem depender do classificador.
   crywolf) e `test-read_sheepdog.R` no crywolf, sobre a mesma fixture
   `export-1.2`; `dev/check-sheepdog-fixture.R` do crywolf confere que a
   cópia dele continua idêntica à do sheepdog.
-- Próximo passo: o `fp_occu_dyn()` no crywolf; a fase 2 vem depois dele
-  (ver Prioridades). No sheepdog, nada bloqueia: só pendências pequenas.
+- Próximo passo (02/11/2026): o **multiespécies** (fase 5, a Fase A do
+  roadmap do crywolf, `fp_occu_ms()`), que passa à frente da fase 2 (ver
+  Prioridades). Do lado do sheepdog, a primeira tarefa é a fixture do
+  contrato com várias espécies (ver Fase 5). Pendente no crywolf: merge do
+  passo 8 (crywolf#14) e o release com o dinâmico e o leitor do esquema
+  1.3.
 - 01/11/2026, **`fp_occu_dyn()` no crywolf (2.1.0.9000, experimental):**
-  passos 1 a 4 de 8 com merge (crywolf#8, #9, #10): temporada no
+  passos 1 a 7 de 8 com merge (crywolf#8 a #11 e #13): temporada no
   `fp_data(season = )`, forward em Stan com as emissões do `fp_occu()`
   (log-densidade igual com uma temporada, ~3e-14), fórmulas `psi1`, `col`
   e `ext` com covariáveis de temporada (`season_covs`), e estados latentes
   por FFBS (`fp_sites()` por sítio-temporada, `fp_ppc()`, `simulate()`,
   `simulate_fp_dyn()`). Temporadas que são datas (`night`,
   `recording_date` do export) são preenchidas pelo `fp_data()`, então
-  cada transição vale uma noite; o esquema do sheepdog não muda. Passo 5
-  (quantidades derivadas: ocupação por temporada, rotatividade, equilíbrio)
-  no crywolf#11, aberto. Faltam os passos 6 e 7 (identificação diante dos
-  falsos positivos e validação, ~7.300 ajustes na AWS, estimados em
-  US$ 3 a 5) e o 8 (vinheta do Curiango com as noites como temporadas,
-  comparada por LOO com sítio-noites independentes). O crywolf de
-  desenvolvimento também lê os exports 1.3 (calibração com covariável
-  contínua), ainda sem release.
+  cada transição vale uma noite; o esquema do sheepdog não muda.
+  Quantidades derivadas por temporada (ocupação esperada e realizada,
+  rotatividade, equilíbrio) no `summary()` (crywolf#11). Passos 6 e 7 na
+  AWS (crywolf#13; 4.450 tarefas, 6.700 ajustes, sem falhas; sem o
+  `fp_calibrate()`, como combinado): com `fp = ~ 1`, colonização,
+  extinção e `psi1` ficam com viés < 0,02 e cobertura de 0,88–1,00 em
+  todas as 45 células de identificação, inclusive sem verificação; a
+  verificação estreita os intervalos (`p10_bar` 20–25% mais estreito com
+  40% verificado). Ignorar os falsos positivos superestima a colonização
+  (+0,06 a +0,28 com p10 de 0,02 a 0,10). Recuperação com covariáveis:
+  cobertura de 0,92–0,98. SBC: ranks uniformes em 8 de 10 parâmetros;
+  `ext_(Intercept)` (p = 0,003) com posterior um pouco conservadora e
+  `fp_(Intercept)` (p = 0,048). O desenho não testou p11 baixo. O crywolf de desenvolvimento
+  também lê os exports 1.3 (calibração com covariável contínua); nada
+  disso tem release ainda (a 2.1.0 enviada ao CRAN não tem).
+- 02/11/2026, **passo 8 do `fp_occu_dyn()` feito** (crywolf#14, CI
+  verde, ainda sem merge). O LOO não serve aqui, porque o `log_lik` do
+  dinâmico é por sítio e o Curiango tem 7 sítios. A comparação foi por
+  validação cruzada em blocos de 7 noites (10 dobras, as mesmas em todos
+  os sítios): o dinâmico (`col`/`ext ~ temp_d + rh_d`) contra
+  sítio-noites independentes (`occ ~ temp_d + rh_d`), os dois com
+  `det ~ bio + aci`, `fp ~ temp + rh` e `random_recorder`. Resultado: elpd
+  dinâmico − independente = +191,5 (EP 29,0); o dinâmico ganha nas 10
+  dobras e nos 7 sítios. O EP trata as 69 unidades sítio × dobra como
+  independentes e provavelmente sai um pouco pequeno. Um ajuste
+  independente (dobra 8) ficou preso numa moda (R-hat 1,54) e foi refeito
+  com outra semente, sem mudar o elpd. Com isso o `fp_occu_dyn()` cumpriu
+  os oito passos, e o Diogo decidiu seguir para o multiespécies.
 - Modo sazonal refeito em 27/10/2026 (`curiango-export.R` com `"season"`,
   e o fluxo com `OUT` numa pasta separada). A regra de 1 erro-padrão escolhe
   o modelo só com mês, que tira o desajuste mensal mas deixa 5 de 7
@@ -142,10 +174,10 @@ verdadeiros e dos falsos positivos sem depender do classificador.
 |---|---|---|---|---|
 | 1 | 0. Contrato de dados | os dois | P–M | — |
 | 2 | 1. Propagação Monte Carlo da calibração | os dois | P | fase 0 |
-| 3 | 2. Modelo conjunto score–ocupação | crywolf | G | fase 0; depois do `fp_occu_dyn()` (decidido em 27/10/2026) |
-| 4 | 3. Validação em duas camadas | sheepdog (+ crywolf) | M | fase 2 |
-| 5 | 4. Atividade vocal (densidade de chamadas) | crywolf | M–G | fase 2 |
-| 6 | 5. Comunidade | crywolf | G | roadmap do crywolf (MSO, Fase A) |
+| 3 | 5. Comunidade | crywolf (+ sheepdog: fixture e verificação por espécie) | G | fase 0; `fp_occu_dyn()` pronto (decidido em 02/11/2026) |
+| 4 | 2. Modelo conjunto score–ocupação | crywolf | G | fase 0; depois do multiespécies |
+| 5 | 3. Validação em duas camadas | sheepdog (+ crywolf) | M | fase 2 |
+| 6 | 4. Atividade vocal (densidade de chamadas) | crywolf | M–G | fase 2 |
 | — | App local (Shiny) | sheepdog | M | nada; em paralelo |
 
 Em paralelo a tudo: o benchmark (seção própria), que decide se cada fase
@@ -162,10 +194,19 @@ covariáveis, identificação junto com ψ e θ). Até lá, `fp ~ temp + rh` é 
 paliativo do lado do crywolf. Nenhum item do sheepdog depende da fase 2,
 só a fase 3.
 
+Decidido pelo Diogo em 02/11/2026, com o `fp_occu_dyn()` pronto (oito
+passos): o multiespécies (fase 5, Fase A do crywolf) vem **antes** da
+fase 2. Ele segue o plano do crywolf, que já tem critérios de pronto
+(log-densidade igual à do `fp_occu()` com uma espécie; recuperação com 5,
+20 e 50 espécies), e usa as detecções binárias com o falso positivo por
+espécie, sem depender dos scores. A fase 2 continua sendo pesquisa e entra
+depois; os scores por espécie chegam ao multiespécies só então.
+
 No sheepdog, a 3.2.1 vai para o CRAN como está; as fases 0, 1 e 3 entram
 como funções novas numa 3.3.0 (sem quebra). Atualizado em 01/11/2026: a
-3.2.1 nunca foi enviada; a 3.3.0 (fases 0 e 1) foi lançada e é a
-candidata ao CRAN; a fase 3 entra numa versão seguinte.
+3.2.1 nunca foi enviada; a 3.3.0 (fases 0 e 1) foi lançada e foi ao
+CRAN como 3.3.2 (vinheta sem o DOI do JAV e uma correção para o
+Windows); a fase 3 entra numa versão seguinte.
 
 ## Fase 0: contrato de dados
 
@@ -406,15 +447,67 @@ com canto dada a ocupação, com covariáveis (lua, temperatura). Precisa de
 É aqui que se testa a hipótese da lua do Curiango (efeito na intensidade,
 não na ocupação). Também é o caso natural dos anuros em coro do FrogNet.
 
-**[decidir]** Se a fase 4 vem antes ou depois da comunidade.
+Vem depois da comunidade: depende da fase 2, que ficou para depois do
+multiespécies (decidido em 02/11/2026).
 
 ## Fase 5: comunidade
 
 Segue a Fase A do roadmap do crywolf (`fp_occu_ms()`, falso positivo por
-espécie, independente entre espécies), agora com scores por espécie. As
+espécie, independente entre espécies), primeiro com as detecções binárias
+e, depois da fase 2, com scores por espécie. As
 `community_matrices_draws()` do sheepdog passam a ser a linha de base para
 comparar: matrizes de comunidade com e sem modelo de observação, numa
 análise de metacomunidade.
+
+O esquema do export já é multiespécies: `scores.csv`, `verification.csv`
+e as chaves da calibração têm `species`, e `schema.json` lista as espécies.
+Mas nenhum dos dois lados testa isso hoje: as fixtures `export-1.1` a
+`export-1.3` têm uma espécie só (*Physalaemus cuvieri*), e o
+`fp_draws_data()` do crywolf para quando o export tem mais de uma espécie
+(exige `fp_read_sheepdog(species = )`). Passos (02/11/2026):
+
+| Passo | Pacote | Pronto quando |
+|---|---|---|
+| Fixture `export-1.3-ms`: três espécies, uma delas rara (poucas detecções e poucos clipes verificados), com calibração por espécie (feita em 02/11/2026, sheepdog#74) | sheepdog | `test-contract.R` confere as chaves por espécie; a cópia no crywolf é idêntica (`dev/check-sheepdog-fixture.R`) |
+| Leitura de todas as espécies: `fp_read_sheepdog(species = NULL)` → `fp_data()` em formato longo (passo "Dados" da Fase A) | crywolf | `print()` e os avisos de desenho por espécie sobre a fixture |
+| Verificação por espécie: conferir quantos clipes verificados cada espécie recebe com `target_total` (divisão igual entre espécies) e com `random_recordings` (cada gravação revisada para todas as espécies); avisar quando uma espécie fica abaixo de um mínimo | sheepdog | simulação com uma espécie rara; aviso no `select_clips()` ou no `export_occupancy_data()` |
+| Export multiespécies do FrogNet (DiverSons), fora dos repositórios dos pacotes (em `frognetUFMS/analysis`), como caso real do `fp_occu_ms()` | os dois | export lido pelo crywolf; ajuste com as 16 espécies; resultados pré-computados na vinheta depois do depósito dos dados |
+
+O risco apontado no crywolf (verificação rara demais nas espécies raras) é
+o que o terceiro passo mede do lado do desenho.
+
+**Dados reais (decidido em 02/11/2026): o FrogNet.** O Curiango é uma
+espécie só. O VicFrogNET (Zenodo 10.5281/zenodo.17773400, CC BY 4.0) foi
+examinado: tem score e veredito por detecção para 14 espécies de anuros em
+14 sítios, mas não publica a lista de gravações (sem ela não há
+não-detecções), e as 600 amostras aleatórias do depósito dão recall de
+cerca de 15%, sem espécie na anotação. O FrogNet (DiverSons, 7 sítios,
+2021–2025) tem o que falta:
+
+- as tabelas de predição completas do modv1 (31 classes, confiança
+  ≥ 0,05; só em ARA, 366 mil predições em 56 mil arquivos);
+- 6.304 clipes revisados (3.139 positivos, 3.165 negativos) em cerca de
+  2.800 sítio-noites, com positivos de 16 espécies, das comuns nos 7
+  sítios (*den_nan*, *phy_alb*, *boa_ran*) às restritas (*den_min* e
+  *sci_fuv* só em MIM e UEM; *tra_typ* com poucos positivos);
+- as noites gravadas por sítio e mês, e uma calibração com a estrutura
+  do m4 (`tp ~ logit_conf + (logit_conf | especie) + (1 | local:especie)`).
+
+Os dados continuam privados e não entram nos pacotes: o desenvolvimento
+usa o export localmente, e a vinheta só traz resultados pré-computados
+depois do depósito dos dados no Zenodo junto com o artigo da RSEC. Pontos
+a resolver no export:
+
+- a lista de gravações: pela listagem dos `.flac` no NAS (os caminhos das
+  tabelas de predição são só uma aproximação);
+- a verificação é do modo `"top"`: as ocasiões foram sorteadas sem
+  depender do score, mas o clipe revisado é o de maior score da ocasião,
+  e as probabilidades de inclusão não foram registradas. Um positivo
+  confirma a ocasião; um negativo não prova que a espécie não cantou;
+- com 7 sítios, a unidade da ocupação deve ser sítio × mês ou sítio ×
+  noite (como no Curiango), ou o multiespécies dinâmico mais adiante;
+- o modv1 foi treinado com gravações dos mesmos sítios, então a
+  calibração precisa ser por sítio × espécie.
 
 A confusão entre espécies (A marcada quando quem canta é B) continua **fora
 do plano**, como decidido no roadmap do crywolf. A literatura sobre ela
@@ -471,7 +564,7 @@ vinheta mostra como abrir e usar o app que vem no pacote.
 |---|---|---|
 | Simulações (`simulate_fp()` estendido) | recuperação, SBC, ignorabilidade, orçamento de validação | a fazer na fase 2 |
 | Curiango (Zenodo 10.5281/zenodo.21795898, CC BY 4.0) | um classificador local e um global, 1.199 arquivos anotados por completo, PPC com falhas conhecidas | já usado nos dois pacotes; falta exportar no esquema |
-| FrogNet (anuros, Pantanal e Cerrado) | multiespécies, coros, atividade vocal | **[decidir]** quais dados e quando |
+| FrogNet (anuros, Pantanal e Cerrado) | multiespécies, coros, atividade vocal | caso real do multiespécies (fase 5; ver lá); dados privados até o depósito com o artigo da RSEC |
 | Conjuntos públicos totalmente anotados (Havaí, Pacific Northwest, usados por Navine et al. e Freeland-Haynes et al.) | validação externa | **[decidir]** conferir licença e acesso |
 
 Contraponto obrigatório no benchmark: Katsis et al. (2025) acharam que,
