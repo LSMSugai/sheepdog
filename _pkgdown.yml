@@ -64,6 +64,7 @@ reference:
       - fit_calibration
       - calibration_effort
       - score_detections
+      - calibrated_thresholds
       - detection_history
       - summarise_history
       - plot_calibration

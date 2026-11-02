@@ -1,5 +1,14 @@
 # sheepdog (development version)
 
+- New `calibrated_thresholds()`: confidence thresholds per site and species
+  from the calibration model of stage 2 (`fit_calibration()`), following
+  Wood & Kahl (2024), instead of from the reviewed clips of each cell
+  alone as in `suggest_thresholds()`. `rule = "probability"` gives the
+  lowest score at which P(TP) reaches the target; `rule = "precision"` the
+  lowest score at which the expected precision of the detections kept,
+  from `score_detections()`, reaches it. With a `brms` model, a
+  conservative threshold from the lower quantile of the posterior is
+  added. The calibration vignette has a new section.
 - `export_occupancy_data(species = )` now filters by the species asked
   for. The argument was masked by the `species` column of the predictions,
   so any value left no prediction and stopped the export. `select_clips()`
