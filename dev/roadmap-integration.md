@@ -468,13 +468,46 @@ Mas nenhum dos dois lados testa isso hoje: as fixtures `export-1.1` a
 
 | Passo | Pacote | Pronto quando |
 |---|---|---|
-| Fixture `export-1.3-ms`: três espécies, uma delas rara (poucas detecções e poucos clipes verificados), com calibração por espécie | sheepdog | `test-contract.R` confere as chaves por espécie; a cópia no crywolf é idêntica (`dev/check-sheepdog-fixture.R`) |
+| Fixture `export-1.3-ms`: três espécies, uma delas rara (poucas detecções e poucos clipes verificados), com calibração por espécie (feita em 02/11/2026, sheepdog#74) | sheepdog | `test-contract.R` confere as chaves por espécie; a cópia no crywolf é idêntica (`dev/check-sheepdog-fixture.R`) |
 | Leitura de todas as espécies: `fp_read_sheepdog(species = NULL)` → `fp_data()` em formato longo (passo "Dados" da Fase A) | crywolf | `print()` e os avisos de desenho por espécie sobre a fixture |
 | Verificação por espécie: conferir quantos clipes verificados cada espécie recebe com `target_total` (divisão igual entre espécies) e com `random_recordings` (cada gravação revisada para todas as espécies); avisar quando uma espécie fica abaixo de um mínimo | sheepdog | simulação com uma espécie rara; aviso no `select_clips()` ou no `export_occupancy_data()` |
-| Dados reais para a vinheta do `fp_occu_ms()` | os dois | **[decidir]** quais dados: o Curiango é uma espécie só, e os dados do FrogNet não entram nos pacotes (só resultados pré-computados, se o Diogo quiser) |
+| Export multiespécies do FrogNet (DiverSons), fora dos repositórios dos pacotes (em `frognetUFMS/analysis`), como caso real do `fp_occu_ms()` | os dois | export lido pelo crywolf; ajuste com as 16 espécies; resultados pré-computados na vinheta depois do depósito dos dados |
 
 O risco apontado no crywolf (verificação rara demais nas espécies raras) é
 o que o terceiro passo mede do lado do desenho.
+
+**Dados reais (decidido em 02/11/2026): o FrogNet.** O Curiango é uma
+espécie só. O VicFrogNET (Zenodo 10.5281/zenodo.17773400, CC BY 4.0) foi
+examinado: tem score e veredito por detecção para 14 espécies de anuros em
+14 sítios, mas não publica a lista de gravações (sem ela não há
+não-detecções), e as 600 amostras aleatórias do depósito dão recall de
+cerca de 15%, sem espécie na anotação. O FrogNet (DiverSons, 7 sítios,
+2021–2025) tem o que falta:
+
+- as tabelas de predição completas do modv1 (31 classes, confiança
+  ≥ 0,05; só em ARA, 366 mil predições em 56 mil arquivos);
+- 6.304 clipes revisados (3.139 positivos, 3.165 negativos) em cerca de
+  2.800 sítio-noites, com positivos de 16 espécies, das comuns nos 7
+  sítios (*den_nan*, *phy_alb*, *boa_ran*) às restritas (*den_min* e
+  *sci_fuv* só em MIM e UEM; *tra_typ* com poucos positivos);
+- as noites gravadas por sítio e mês, e uma calibração com a estrutura
+  do m4 (`tp ~ logit_conf + (logit_conf | especie) + (1 | local:especie)`).
+
+Os dados continuam privados e não entram nos pacotes: o desenvolvimento
+usa o export localmente, e a vinheta só traz resultados pré-computados
+depois do depósito dos dados no Zenodo junto com o artigo da RSEC. Pontos
+a resolver no export:
+
+- a lista de gravações: pela listagem dos `.flac` no NAS (os caminhos das
+  tabelas de predição são só uma aproximação);
+- a verificação é do modo `"top"`: as ocasiões foram sorteadas sem
+  depender do score, mas o clipe revisado é o de maior score da ocasião,
+  e as probabilidades de inclusão não foram registradas. Um positivo
+  confirma a ocasião; um negativo não prova que a espécie não cantou;
+- com 7 sítios, a unidade da ocupação deve ser sítio × mês ou sítio ×
+  noite (como no Curiango), ou o multiespécies dinâmico mais adiante;
+- o modv1 foi treinado com gravações dos mesmos sítios, então a
+  calibração precisa ser por sítio × espécie.
 
 A confusão entre espécies (A marcada quando quem canta é B) continua **fora
 do plano**, como decidido no roadmap do crywolf. A literatura sobre ela
@@ -531,7 +564,7 @@ vinheta mostra como abrir e usar o app que vem no pacote.
 |---|---|---|
 | Simulações (`simulate_fp()` estendido) | recuperação, SBC, ignorabilidade, orçamento de validação | a fazer na fase 2 |
 | Curiango (Zenodo 10.5281/zenodo.21795898, CC BY 4.0) | um classificador local e um global, 1.199 arquivos anotados por completo, PPC com falhas conhecidas | já usado nos dois pacotes; falta exportar no esquema |
-| FrogNet (anuros, Pantanal e Cerrado) | multiespécies, coros, atividade vocal | **[decidir]** quais dados e quando |
+| FrogNet (anuros, Pantanal e Cerrado) | multiespécies, coros, atividade vocal | caso real do multiespécies (fase 5; ver lá); dados privados até o depósito com o artigo da RSEC |
 | Conjuntos públicos totalmente anotados (Havaí, Pacific Northwest, usados por Navine et al. e Freeland-Haynes et al.) | validação externa | **[decidir]** conferir licença e acesso |
 
 Contraponto obrigatório no benchmark: Katsis et al. (2025) acharam que,
