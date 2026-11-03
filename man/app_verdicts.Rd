@@ -20,7 +20,11 @@ app_verdicts(manifest, verdicts_file, clips_dir = NULL, reviewer = NULL)
 \item{reviewer}{Optional reviewer: only their verdicts are used. With
 \code{NULL}, every reviewer's verdicts are kept, one row per clip and
 reviewer, ready for \code{\link[=reviewer_agreement]{reviewer_agreement()}} and
-\code{\link[=consensus_verdicts]{consensus_verdicts()}}.}
+\code{\link[=consensus_verdicts]{consensus_verdicts()}}.
+
+A clip marked more than once by the same reviewer keeps the last
+verdict; a message says how many clips were marked again and how many of
+them changed verdict.}
 }
 \value{
 The manifest with \code{verdict} (\code{"positive"}, \code{"negative"},

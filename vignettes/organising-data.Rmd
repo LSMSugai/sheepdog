@@ -133,7 +133,7 @@ and `run_app()`.
 | choose clips | `select_clips()` | predictions, recordings | a manifest in R |
 | cut clips | `cut_clips()`, `extract_validation_clips()` | the audio, through `Begin Path` | `clips/<species>/`, `clip_manifest.csv` |
 | review | file manager (`Positive`/`Negative` subfolders) or `run_app()` | clips, manifest | folders, or a verdicts CSV |
-| join verdicts | `post_validation()` | review folder, manifest | `validation_by_clip.csv` and summaries |
+| join verdicts | `post_validation()` | review folder or `verdicts.csv`, manifest | `validation_by_clip.csv` and summaries |
 | calibrate | `calibrate()` | `validation_by_clip.csv`, selection tables | calibration outputs, detection histories |
 
 See `vignette("sheepdog")` for the whole pipeline on the example data and

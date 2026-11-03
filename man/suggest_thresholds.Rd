@@ -21,8 +21,9 @@ parts of the gradient lack reviewed clips.}
 }
 \value{
 A tibble with \code{site}, \code{species_folder}, the \code{by} columns,
-\code{threshold}, \code{n_support} and \code{precision_at_threshold} (\code{NA} when no
-cut reaches the target). Without any reviewed clip with a confidence,
+\code{threshold}, \code{n_support}, \code{precision_at_threshold} (\code{NA} when no
+cut reaches the target) and \code{precision_weighted_at_threshold} (only
+with \code{inclusion_prob}). Without any reviewed clip with a confidence,
 the tibble has no rows.
 }
 \description{
@@ -37,6 +38,11 @@ The precision is computed from the reviewed clips of each cell alone, so
 it is reliable only when the clips were drawn at random within the cell
 and are numerous. \code{\link[=calibrated_thresholds]{calibrated_thresholds()}} derives the thresholds from
 the calibration model of stage 2 instead.
+
+The threshold is chosen from the unweighted precision. With
+\code{inclusion_prob} in \code{validation}, the table also gives
+\code{precision_weighted_at_threshold}, the precision at the threshold
+weighted by \code{1 / inclusion_prob}, as in \code{\link[=precision_by_bin]{precision_by_bin()}}.
 }
 \seealso{
 \code{\link[=calibrated_thresholds]{calibrated_thresholds()}} for thresholds from the calibration
