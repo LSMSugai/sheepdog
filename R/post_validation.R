@@ -93,7 +93,7 @@ has_inclusion_prob <- function(validation) {
 # algum clipe do grupo nao tem a probabilidade (clipes de "top")
 weighted_precision <- function(verdict, prob) {
   prob <- as.numeric(prob)
-  if (length(prob) == 0 || anyNA(prob)) return(NA_real_)
+  if (anyNA(prob)) return(NA_real_)
   w <- 1 / prob
   sum(w[verdict == "positive"]) / sum(w)
 }
@@ -187,11 +187,9 @@ suggest_thresholds <- function(validation, target_precision = 0.90,
   if (nrow(validados) == 0) {
     vazio <- tibble(site = character(), species_folder = character())
     for (col in by) vazio[[col]] <- validation[[col]][0]
-    vazio <- bind_cols(vazio,
-                       tibble(threshold = numeric(), n_support = integer(),
-                              precision_at_threshold = numeric()))
-    if (pesos) vazio$precision_weighted_at_threshold <- numeric()
-    return(vazio)
+    return(bind_cols(vazio,
+                     tibble(threshold = numeric(), n_support = integer(),
+                            precision_at_threshold = numeric())))
   }
   validados |>
     group_by(site, species_folder, across(all_of(by))) |>

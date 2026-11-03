@@ -345,6 +345,14 @@ test_that("post_validation() reads the verdicts file of the app", {
   expect_identical(nrow(cons$validation), 6L)
   expect_identical(cons$validation$verdict[cons$validation$clip_file ==
                                              "clip1.wav"], "disagreement")
+  # com inclusion_prob, as tabelas ganham a precisao ponderada
+  man$inclusion_prob <- 0.5
+  expect_message(
+    pond <- post_validation(manifest_path = man,
+                            output_dir = file.path(d, "pv_pond"),
+                            verdicts_file = f, reviewer = "bia", min_n = 1),
+    "weighted by 1 / inclusion_prob")
+  expect_true("precision_weighted" %in% names(pond$precision))
   expect_error(post_validation(manifest_path = man, output_dir = saida),
                "Give `review_dir`")
   expect_error(suppressMessages(post_validation(
