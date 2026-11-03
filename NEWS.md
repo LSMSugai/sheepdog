@@ -1,5 +1,14 @@
 # sheepdog (development version)
 
+- New `list_recordings()`: builds the list of all recordings (`site`,
+  `source_audio`) from the audio folders, including those without any
+  prediction, for `recordings` in `select_clips()`,
+  `export_occupancy_data()` and `run_app()`. The site is the first folder
+  below the root; `remap_from`/`remap_to` rewrite the prefix to match
+  `Begin Path`, and `predictions` checks that the audio files of the
+  predictions are in the list. It can write `recordings.csv` (#81).
+- New article, "Organising the data": the folder layout sheepdog expects,
+  file names, the paths written by BirdNET and the list of recordings.
 - New `calibrated_thresholds()`: confidence thresholds per site and species
   from the calibration model of stage 2 (`fit_calibration()`), following
   Wood & Kahl (2024), instead of from the reviewed clips of each cell

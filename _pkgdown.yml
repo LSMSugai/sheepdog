@@ -21,6 +21,7 @@ reference:
     contents:
       - extract_validation_clips
       - read_selection_tables
+      - list_recordings
       - select_clips
       - covariate_bins
       - cut_clips
@@ -100,6 +101,7 @@ articles:
   - title: The three stages
     navbar: The three stages
     contents:
+      - organising-data
       - sampling-designs
       - articles/reviewing-in-the-gui
       - articles/review-app

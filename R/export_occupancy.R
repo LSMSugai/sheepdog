@@ -553,7 +553,7 @@ occupancy_tables <- c("occasions", "detections", "scores", "validation",
 export_occasions <- function(det, recordings, unidade, recording_duration,
                              dawn_hour, audio_pattern, remap_from, remap_to) {
   gravacoes <- suppressMessages(
-    list_recordings(det, recordings, audio_pattern, remap_from, remap_to))
+    get_recordings(det, recordings, audio_pattern, remap_from, remap_to))
   if (unidade == "minute") {
     gravacoes <- gravacoes |>
       mutate(.dur = audio_duration(source_audio, recording_duration))
