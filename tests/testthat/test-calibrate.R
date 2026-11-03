@@ -283,3 +283,44 @@ test_that("the default selection uses log-loss rather than AUC ranking", {
                "stop after selection")
   expect_identical(selected, calibration_models()$m1_species_intercept)
 })
+
+test_that("calibrate() writes the score thresholds equivalent to p_min", {
+  skip_if_not_installed("lme4")
+  saida <- withr::local_tempdir()
+  res <- suppressWarnings(rodar_calibracao(saida, p_min = 0.9))
+  expect_true(file.exists(file.path(saida, "thresholds.csv")))
+  esperado <- calibrated_thresholds(res$fit, target = 0.9,
+                                    scored = res$scored)
+  expect_equal(res$thresholds, esperado)
+  lido <- readr::read_csv(file.path(saida, "thresholds.csv"),
+                          show_col_types = FALSE)
+  expect_equal(nrow(lido), nrow(esperado))
+  expect_setequal(paste(lido$site, lido$species),
+                  paste(res$scored$site, res$scored$species))
+})
+
+test_that("calibrate() goes on when the thresholds cannot be computed", {
+  skip_if_not_installed("lme4")
+  saida <- withr::local_tempdir()
+  local_mocked_bindings(calibrated_thresholds = function(...) stop("boom"))
+  raiz <- sim_root()
+  msgs <- character()
+  res <- withCallingHandlers(
+    suppressWarnings(calibrate(
+      validation_files = ref_path("cal", paste0("validacao_por_clipe_",
+                                                c("ARA", "XAR2", "BAI"),
+                                                ".csv")),
+      prediction_tables = c(
+        ARA = file.path(raiz, "tabelas/output_ARA/BirdNET_SelectionTable.txt"),
+        XAR = file.path(raiz, "tabelas/output_XAR/BirdNET_SelectionTable.txt"),
+        BAI = file.path(raiz, "tabelas/BAI/BirdNET_SelectionTable.txt")),
+      output_dir = saida, site_map = c(XAR2 = "XAR"))),
+    message = function(m) {
+      msgs <<- c(msgs, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    })
+  expect_true(any(grepl("thresholds.csv was not written: boom", msgs)))
+  expect_null(res$thresholds)
+  expect_false(file.exists(file.path(saida, "thresholds.csv")))
+  expect_true(file.exists(file.path(saida, "nightly_detection_history.csv")))
+})

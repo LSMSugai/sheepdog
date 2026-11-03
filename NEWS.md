@@ -17,7 +17,15 @@
   lowest score at which the expected precision of the detections kept,
   from `score_detections()`, reaches it. With a `brms` model, a
   conservative threshold from the lower quantile of the posterior is
-  added. The calibration vignette has a new section.
+  added. The calibration vignette has a new section. The default target,
+  0.95, is the `p_min` of `score_detections()` and `calibrate()`.
+- `calibrate()` writes `thresholds.csv` and returns `thresholds`: the
+  `calibrated_thresholds()` of each site x species with
+  `rule = "probability"` and `target = p_min`, the score equivalent of the
+  cut on P(TP) used for the detection histories.
+- The sampling-designs vignette opens with a figure that matches each
+  design to the question it answers, and the calibration vignette has a
+  guide to choosing a confidence threshold.
 - `read_selection_tables()` also reads the per-audio selection tables that
   the BirdNET GUI writes by default (`<audio>.BirdNET.selection.table.txt`,
   new argument `per_audio_pattern`), besides the combined table of each

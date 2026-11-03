@@ -19,7 +19,12 @@ calibrated_thresholds(
 \item{fit}{Model returned by \code{\link[=fit_calibration]{fit_calibration()}}.}
 
 \item{target}{Target probability (\code{"probability"}) or precision
-(\code{"precision"}).}
+(\code{"precision"}). The default, 0.95, is the \code{p_min} of
+\code{\link[=score_detections]{score_detections()}} and \code{\link[=calibrate]{calibrate()}}, so that the probability
+threshold is the score equivalent of the cut on P(TP) used for the
+detection histories. It is the same for both rules; the \code{"precision"}
+threshold is lower for the same target (see Details).
+\code{\link[=suggest_thresholds]{suggest_thresholds()}} uses 0.90 by default.}
 
 \item{rule}{\code{"probability"} or \code{"precision"}; see Details.}
 
@@ -122,4 +127,9 @@ scored <- score_detections(tables, fit)
 calibrated_thresholds(fit, target = 0.90, rule = "precision",
                       scored = scored)
 }
+}
+\seealso{
+\code{\link[=suggest_thresholds]{suggest_thresholds()}} for thresholds from the reviewed clips of
+each cell; \code{\link[=calibrate]{calibrate()}}, which writes these thresholds to
+\code{thresholds.csv}.
 }

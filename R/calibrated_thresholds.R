@@ -49,7 +49,12 @@
 #'
 #' @param fit Model returned by [fit_calibration()].
 #' @param target Target probability (`"probability"`) or precision
-#'   (`"precision"`).
+#'   (`"precision"`). The default, 0.95, is the `p_min` of
+#'   [score_detections()] and [calibrate()], so that the probability
+#'   threshold is the score equivalent of the cut on P(TP) used for the
+#'   detection histories. It is the same for both rules; the `"precision"`
+#'   threshold is lower for the same target (see Details).
+#'   [suggest_thresholds()] uses 0.90 by default.
 #' @param rule `"probability"` or `"precision"`; see Details.
 #' @param scored Table returned by [score_detections()], with `site`,
 #'   `species`, `confidence` and `p_tp`. Required for `rule = "precision"`;
@@ -72,6 +77,9 @@
 #'   be `NA` while `"probability"` gives a threshold: the probability
 #'   threshold may lie above every detection of the cell, and then no set of
 #'   detections reaches the target.
+#' @seealso [suggest_thresholds()] for thresholds from the reviewed clips of
+#'   each cell; [calibrate()], which writes these thresholds to
+#'   `thresholds.csv`.
 #' @export
 #' @examples
 #' \dontrun{
