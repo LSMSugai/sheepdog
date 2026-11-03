@@ -53,8 +53,10 @@ The development version can be installed from GitHub:
 remotes::install_github("diogoprov/sheepdog")
 ```
 
-BirdNET works on 3s clips. Creating audio snippets needs [av](https://cran.r-project.org/package=av) (it bundles
-ffmpeg), the hierarchical calibration needs
+Cutting the clips for review (the 3-s windows that BirdNET analyses, or whole
+recordings in the random-recording design) needs
+[av](https://cran.r-project.org/package=av) (it bundles ffmpeg), the
+hierarchical calibration needs
 [lme4](https://cran.r-project.org/package=lme4), and the figures need
 [ggplot2](https://cran.r-project.org/package=ggplot2):
 
