@@ -4,22 +4,56 @@
 \alias{exclude_training_clips}
 \title{Leave the training clips out of a manifest}
 \usage{
-exclude_training_clips(manifest, training_set)
+exclude_training_clips(
+  manifest,
+  training_set,
+  level = c("clip", "recording", "night"),
+  any_species = FALSE,
+  pattern = NULL
+)
 }
 \arguments{
 \item{manifest}{Clip manifest, as returned by \code{\link[=select_clips]{select_clips()}} or read
 from \code{clip_manifest.csv}.}
 
-\item{training_set}{Table returned by \code{\link[=build_training_set]{build_training_set()}}, or the
-path to its \code{training_set.csv}.}
+\item{training_set}{Table returned by \code{\link[=build_training_set]{build_training_set()}} or
+\code{\link[=training_nights]{training_nights()}}, or the path to a \code{training_set.csv}.}
+
+\item{level}{What a training clip excludes; see Levels.}
+
+\item{any_species}{Exclude across species?}
+
+\item{pattern}{With a table of \code{\link[=training_nights]{training_nights()}} and
+\code{level = "recording"}, the regular expression that reads the
+recordings from \code{source_audio}. By default, the one recorded in the
+table by \code{\link[=training_nights]{training_nights()}} (lost if the table was rebuilt, e.g. by
+\code{\link[dplyr:bind_rows]{dplyr::bind_rows()}}), else the default of \code{\link[=training_nights]{training_nights()}}.}
 }
 \value{
-The manifest without the overlapping clips.
+The manifest without the excluded clips.
 }
 \description{
-Drops from a clip manifest the clips that overlap, for the same species
-and the same recording, a clip used to train the classifier (the
-\code{training_set.csv} written by \code{\link[=build_training_set]{build_training_set()}}). Use it before
-reviewing the detections of a retrained classifier: scores of the
+Drops from a clip manifest the clips that share data with the clips used
+to train the classifier (the \code{training_set.csv} written by
+\code{\link[=build_training_set]{build_training_set()}}, or the table of \code{\link[=training_nights]{training_nights()}}). Use it
+before reviewing the detections of a retrained classifier: scores of the
 clips it was trained on are biased upwards.
 }
+\section{Levels}{
+
+\itemize{
+\item \code{"clip"}: clips that overlap in time a training clip of the same
+recording.
+\item \code{"recording"}: every clip of a recording with a training clip.
+\item \code{"night"}: every clip of a site x night with a training clip.
+}
+
+With \code{any_species = FALSE}, only clips of the same species are dropped;
+with \code{TRUE}, a recording or night used to train one species is
+left out for all of them. A table of \code{\link[=training_nights]{training_nights()}} has no species,
+clip times or \code{source_audio}: it takes \code{level = "recording"} or
+\code{"night"}, always for any species. With \code{"recording"}, the site, date
+and time are read from \code{source_audio} of the manifest with \code{pattern},
+which should be the one given to \code{\link[=training_nights]{training_nights()}}.
+}
+

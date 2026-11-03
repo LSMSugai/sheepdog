@@ -101,3 +101,36 @@ test_that("a manifest without a confidence column is read", {
   expect_true(is.na(val$confidence))
   expect_identical(nrow(precision_by_bin(val)), 0L)
 })
+
+test_that("precision is also weighted by 1 / inclusion_prob", {
+  val <- tibble::tibble(
+    site = "A", species_folder = "sp",
+    confidence = c(0.55, 0.56, 0.57, 0.58, 0.95, 0.96),
+    verdict = c("positive", "negative", "negative", "negative",
+                "positive", "positive"),
+    inclusion_prob = c(0.1, 1, 1, 1, 0.5, 0.5))
+  p <- precision_by_bin(val, min_n = 1)
+  expect_named(p, c("site", "species_folder", "bin", "n_reviewed",
+                    "n_positive", "precision", "precision_weighted",
+                    "low_support"))
+  b5 <- p[p$bin == "[0.5,0.6)", ]
+  expect_equal(b5$precision, 0.25)
+  expect_equal(b5$precision_weighted, 10 / 13)
+  expect_equal(p$precision_weighted[p$bin == "[0.9,1]"], 1)
+  th <- suggest_thresholds(val, target_precision = 0.5, min_n = 1)
+  expect_equal(th$threshold, 0.55)
+  expect_equal(th$precision_at_threshold, 0.5)
+  expect_equal(th$precision_weighted_at_threshold, (10 + 4) / (10 + 3 + 4))
+  # um clipe sem inclusion_prob (de "top") deixa a faixa sem a ponderada
+  val$inclusion_prob[1] <- NA
+  p2 <- precision_by_bin(val, min_n = 1)
+  expect_true(is.na(p2$precision_weighted[p2$bin == "[0.5,0.6)"]))
+  # sem inclusion_prob, as tabelas ficam como antes
+  val$inclusion_prob <- NULL
+  expect_false("precision_weighted" %in% names(precision_by_bin(val)))
+  expect_false("precision_weighted_at_threshold" %in%
+                 names(suggest_thresholds(val, min_n = 1)))
+  vazio <- suggest_thresholds(val[0, ] |>
+                                dplyr::mutate(inclusion_prob = numeric()))
+  expect_identical(nrow(vazio), 0L)
+})

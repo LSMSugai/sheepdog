@@ -23,6 +23,14 @@
 #   curiango-flow-summary.csv  pooled posterior summaries (fp_occu_mc);
 #   curiango-flow-fits.csv     convergence of each fit;
 #   curiango-flow-session.txt  sessionInfo().
+# With DRAWS_DIR set, the pooled draws of the parameters (4 chains per fit,
+# in the order of the kept fits) and the diagnostics of the fits are also
+# saved there, as <classifier>-draws.rds and <classifier>-diagnostics.rds,
+# for curiango-mc-stability.R.
+# CLASSIFIERS=custom runs one classifier only. An export whose calibration
+# has continuous covariates (schema 1.3, CALIB_COVARIATE of
+# curiango-export.R) already holds its versions: they are read as they are,
+# and M must equal the number exported (N_VERSIONS).
 args <- commandArgs(trailingOnly = TRUE)
 export <- if (length(args)) args[1] else "dev/benchmarks/results/curiango-export"
 M <- as.integer(Sys.getenv("M", "20"))
@@ -33,6 +41,7 @@ devtools::load_all(".", quiet = TRUE)
 stopifnot(utils::packageVersion("crywolf") >= "2.0.0.9000")
 suppressPackageStartupMessages(library(dplyr))
 out <- Sys.getenv("OUT", "inst/benchmarks")
+draws_dir <- Sys.getenv("DRAWS_DIR", "")
 dir.create(out, showWarnings = FALSE, recursive = TRUE)
 
 zs <- function(v) as.numeric(scale(v))
@@ -40,7 +49,8 @@ crywolf::fp_compile()
 future::plan(future::multisession, workers = workers)
 ppc <- versions_tab <- summaries <- fits <- list()
 
-for (cl in c("custom", "birdnet")) {
+classifiers <- strsplit(Sys.getenv("CLASSIFIERS", "custom,birdnet"), ",")[[1]]
+for (cl in classifiers) {
   message("== ", cl)
   dir <- file.path(export, cl)
 
@@ -53,8 +63,15 @@ for (cl in c("custom", "birdnet")) {
   ppc[[cl]] <- calibration_ppc(fit, cal_data, group = "month", seed = seed) |>
     mutate(classifier = cl, .before = 1)
 
-  # 2. versoes das deteccoes por ocasiao
-  od <- occasion_draws(dir, rule = "sample", n_draws = M, seed = seed)
+  # 2. versoes das deteccoes por ocasiao (no esquema 1.3, ja exportadas)
+  covs_cal <- jsonlite::read_json(file.path(dir, "schema.json"))$calibration$covariates
+  if (length(covs_cal)) {
+    od <- arrow::read_parquet(file.path(dir, "occasion_draws.parquet"))
+    stopifnot("M must equal the versions of the export" =
+                length(unique(od$draw)) == M)
+  } else {
+    od <- occasion_draws(dir, rule = "sample", n_draws = M, seed = seed)
+  }
 
   # 3. crywolf: leitura, versoes e ajuste
   x <- suppressMessages(crywolf::fp_read_sheepdog(dir, species = "nyc_alb"))
@@ -62,9 +79,14 @@ for (cl in c("custom", "birdnet")) {
   nights <- occ[!duplicated(occ$night_site_id), c("night_site_id", "temp", "rh", "moon")]
   nights <- mutate(nights, temp = zs(temp), rh = zs(rh), moon = zs(log(moon)))
   occ <- transmute(occ, site, occasion_id, night_site_id, bio = zs(bio), aci = zs(aci))
-  versions <- crywolf::fp_draws_data(x, rule = "sample", n_draws = M, seed = seed,
-                                     occasions = occ, sites = nights,
-                                     site = "night_site_id")
+  versions <- if (length(covs_cal)) {
+    crywolf::fp_draws_data(x, occasions = occ, sites = nights,
+                           site = "night_site_id")
+  } else {
+    crywolf::fp_draws_data(x, rule = "sample", n_draws = M, seed = seed,
+                           occasions = occ, sites = nights,
+                           site = "night_site_id")
+  }
   versions_tab[[cl]] <- tibble(
     classifier = cl, draw = attr(versions, "draws"),
     detection_rate = vapply(versions, function(d) mean(d$auto$y), numeric(1)))
@@ -84,6 +106,13 @@ for (cl in c("custom", "birdnet")) {
   fits[[cl]] <- mc$diagnostics |> mutate(classifier = cl, .before = 1,
                                          minutes_total = minutes)
   print(summary(mc))
+  if (nzchar(draws_dir)) {
+    dir.create(draws_dir, showWarnings = FALSE, recursive = TRUE)
+    saveRDS(posterior::subset_draws(mc$draws,
+                                    variable = summaries[[cl]]$variable),
+            file.path(draws_dir, paste0(cl, "-draws.rds")))
+    saveRDS(mc$diagnostics, file.path(draws_dir, paste0(cl, "-diagnostics.rds")))
+  }
 }
 
 wr <- function(x, f) readr::write_csv(bind_rows(x), file.path(out, f), na = "")

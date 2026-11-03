@@ -1,0 +1,20 @@
+# Coverage is reported, not enforced: the checks never block a merge.
+comment:
+  layout: "diff, files"
+  require_changes: true
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        informational: true
+    patch:
+      default:
+        target: auto
+        informational: true
+ignore:
+  - "dev"
+  - "inst"
+  - "tests"
+  - "data-raw"

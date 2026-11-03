@@ -23,6 +23,8 @@ and compares the clips they select.
 | `"random_detections"` | occasion with a detection | random, within score-independent strata | false-positive rates, observation-confirmation design |
 | `"random_recordings"` | recording or minute | random, among all recorded | false-positive and false-negative rates, multiple-method design |
 
+![The same night of twelve hourly recordings, shown three times. "top" keeps the highest-scoring prediction of each recording; "random_detections" draws recordings with a detection above the threshold and reviews every detection in them; "random_recordings" draws recordings among all, including ones without predictions, and annotates them by ear.](figures/sampling-designs.svg){width=100%}
+
 ## Example data
 
 The example consists of simulated BirdNET selection tables (Raven Pro format)
@@ -220,6 +222,13 @@ all(per_occasion$n_clips == per_occasion$n_detections_occasion)
 This check is worth repeating on the validation table before passing it to
 an occupancy model: a clip missing from an occasion breaks the assumption
 that all of its detections were confirmed.
+
+Because the strata are drawn with different probabilities, the share of
+positive verdicts among the reviewed clips is not the precision among all
+the predictions. `precision_by_bin()`, `suggest_thresholds()` and
+`post_validation()` add the precision weighted by `1 / inclusion_prob`
+(`precision_weighted`) whenever the validation table carries
+`inclusion_prob`.
 
 ## `"random_recordings"`: multiple-method design
 

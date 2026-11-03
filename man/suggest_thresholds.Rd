@@ -4,7 +4,7 @@
 \alias{suggest_thresholds}
 \title{Suggest a confidence threshold per species}
 \usage{
-suggest_thresholds(validation, target_precision = 0.9, min_n = 15)
+suggest_thresholds(validation, target_precision = 0.9, min_n = 15, by = NULL)
 }
 \arguments{
 \item{validation}{Table returned by \code{\link[=classify_review]{classify_review()}}.}
@@ -13,16 +13,38 @@ suggest_thresholds(validation, target_precision = 0.9, min_n = 15)
 
 \item{min_n}{Minimum of reviewed clips for a bin to be taken seriously;
 bins with fewer are flagged in \code{low_support}.}
+
+\item{by}{Optional columns of \code{validation} that split each site x
+species cell further, e.g. the bin of an environmental gradient or of
+an acoustic index joined from \code{\link[=covariate_bins]{covariate_bins()}}. They show which
+parts of the gradient lack reviewed clips.}
 }
 \value{
-A tibble with \code{site}, \code{species_folder}, \code{threshold},
-\code{n_support} and \code{precision_at_threshold} (\code{NA} when no cut reaches
-the target). Without any reviewed clip with a confidence, the tibble
-has no rows.
+A tibble with \code{site}, \code{species_folder}, the \code{by} columns,
+\code{threshold}, \code{n_support}, \code{precision_at_threshold} (\code{NA} when no
+cut reaches the target) and \code{precision_weighted_at_threshold} (only
+with \code{inclusion_prob}). Without any reviewed clip with a confidence,
+the tibble has no rows.
 }
 \description{
-For each site and species, the lowest confidence \code{c} such that the
+For each site and species (and each level of the \code{by} columns), the
+lowest confidence \code{c} such that the
 precision among the reviewed clips with confidence >= \code{c} reaches
 \code{target_precision}, with at least \code{min_n} clips. Candidate cuts are the
 observed confidences rounded to two decimals.
+}
+\details{
+The precision is computed from the reviewed clips of each cell alone, so
+it is reliable only when the clips were drawn at random within the cell
+and are numerous. \code{\link[=calibrated_thresholds]{calibrated_thresholds()}} derives the thresholds from
+the calibration model of stage 2 instead.
+
+The threshold is chosen from the unweighted precision. With
+\code{inclusion_prob} in \code{validation}, the table also gives
+\code{precision_weighted_at_threshold}, the precision at the threshold
+weighted by \code{1 / inclusion_prob}, as in \code{\link[=precision_by_bin]{precision_by_bin()}}.
+}
+\seealso{
+\code{\link[=calibrated_thresholds]{calibrated_thresholds()}} for thresholds from the calibration
+model.
 }

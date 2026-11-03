@@ -27,16 +27,31 @@ jobs:
           # Optional engines are exercised in R-CMD-check; coverage uses
           # the packages needed by the frequentist and plotting tests.
           dependencies: '"hard"'
-          extra-packages: any::covr, any::DT, any::htmltools, any::testthat, any::lme4, any::ggplot2
+          extra-packages: any::covr, any::xml2, any::DT, any::htmltools, any::testthat, any::lme4, any::ggplot2
       - name: Measure coverage
         shell: Rscript {0}
         run: |
-          coverage <- covr::package_coverage()
+          coverage <- covr::package_coverage(
+            quiet = FALSE, clean = FALSE,
+            install_path = file.path(normalizePath(Sys.getenv("RUNNER_TEMP"),
+                                                   winslash = "/"), "package"))
           dir.create("coverage", showWarnings = FALSE)
           covr::to_cobertura(coverage, filename = "coverage/cobertura.xml")
           covr::report(coverage, file = "coverage/index.html", browse = FALSE)
           writeLines(sprintf("Test coverage: %.2f%%", covr::percent_coverage(coverage)),
                      Sys.getenv("GITHUB_STEP_SUMMARY"))
+      - name: Show testthat output
+        if: always()
+        run: |
+          find '${{ runner.temp }}/package' -name 'testthat.Rout*' -exec cat '{}' \; || true
+        shell: bash
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/cobertura.xml
+          token: ${{ secrets.CODECOV }}
+          # um upload que falha nao derruba o job (forks nao tem o token)
+          fail_ci_if_error: false
       - uses: actions/upload-artifact@v4
         with:
           name: test-coverage

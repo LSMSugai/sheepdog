@@ -1,0 +1,105 @@
+digraph fase2_dag {
+
+  // DAG of the joint score-occupancy model proposed for phase 2
+  // (dev/roadmap-integration.md). Same style and notation as the DAG of
+  // the crywolf vignette (crywolf: dev/dag/crywolf_dag.dot). Priors marked
+  // "to be set" have no default yet.
+
+  graph [rankdir=TB, fontname="Arial", bgcolor=white,
+         nodesep=0.45, ranksep=0.7, pad=0.35, newrank=true]
+  node  [fontname="Arial", fontsize=12]
+  edge  [color="#5F6B7A", arrowsize=0.8, fontname="Arial"]
+
+  // ---------------- Priors ----------------
+  node [shape=hexagon, style=filled, fillcolor="#EDE7F6",
+        color="#7B1FA2", fontcolor="#4A148C"]
+  P_beta  [label=<<TABLE BORDER="0" CELLSPACING="2"><TR><TD>β<SUB>0</SUB> ~ Normal(0, 1.5)</TD></TR><TR><TD>slopes in <B>β</B> ~ Normal(0, 2.5)</TD></TR></TABLE>>]
+  P_alpha [label=<<TABLE BORDER="0" CELLSPACING="2"><TR><TD>α<SUB>0</SUB> ~ Normal(0, 1.5)</TD></TR><TR><TD>slopes in <B>α</B>, α<SUB>w</SUB> ~ Normal(0, 2.5)</TD></TR></TABLE>>]
+  P_sig   [label=<σ<SUB>u</SUB> ~ half-Normal(0, 2)>]
+  P_score [label=<<TABLE BORDER="0" CELLSPACING="2"><TR><TD>λ<SUB>0</SUB>, Δ<SUB>s</SUB> &gt; 0, <B>γ</B><SUB>0</SUB>, <B>γ</B><SUB>1</SUB>, σ<SUB>0</SUB>, σ<SUB>1</SUB></TD></TR><TR><TD><I>to be set</I></TD></TR></TABLE>>]
+
+  // ---------------- Parameters ----------------
+  node [shape=ellipse, style=filled, fillcolor="#FFF9C4",
+        color="#F9A825", fontcolor="#212121"]
+  beta  [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD><B>β</B></TD></TR><TR><TD><FONT POINT-SIZE="10">occupancy</FONT></TD></TR></TABLE>>]
+  alpha [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD><B>α</B>, α<SUB>w</SUB></TD></TR><TR><TD><FONT POINT-SIZE="10">calling (α<SUB>w</SUB>: Markov)</FONT></TD></TR></TABLE>>]
+  sig   [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD>σ<SUB>u</SUB></TD></TR><TR><TD><FONT POINT-SIZE="10">recorder SD</FONT></TD></TR></TABLE>>]
+  score [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD>λ<SUB>0</SUB>, Δ<SUB>s</SUB>, <B>γ</B><SUB>0</SUB>, <B>γ</B><SUB>1</SUB>, σ<SUB>0</SUB>, σ<SUB>1</SUB></TD></TR><TR><TD><FONT POINT-SIZE="10">classifier (score distributions)</FONT></TD></TR></TABLE>>]
+
+  // ---------------- Observed covariates ----------------
+  node [shape=rect, style=filled, fillcolor="#E3F2FD",
+        color="#1565C0", fontcolor="#0D47A1"]
+  X [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD><B>x</B><SUB>i</SUB></TD></TR><TR><TD><FONT POINT-SIZE="10">site covariates (occ)</FONT></TD></TR></TABLE>>]
+  A [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD><B>d</B><SUB>ik</SUB></TD></TR><TR><TD><FONT POINT-SIZE="10">occasion covariates (det)</FONT></TD></TR></TABLE>>]
+  G [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD><B>g</B><SUB>ik</SUB></TD></TR><TR><TD><FONT POINT-SIZE="10">classifier covariates (score1, score0)</FONT></TD></TR></TABLE>>, color="#E65100", penwidth=2]
+  N [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD>n<SUB>ik</SUB>, c</TD></TR><TR><TD><FONT POINT-SIZE="10">windows per occasion, censoring point</FONT></TD></TR></TABLE>>]
+
+  // ---------------- Latent / linear predictors ----------------
+  node [shape=ellipse, style=filled, fillcolor="#E8F5E9",
+        color="#2E7D32", fontcolor="#1B5E20"]
+  u     [style="filled,dashed", label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD>u<SUB>r</SUB></TD></TR><TR><TD><FONT POINT-SIZE="10">recorder effect (optional)</FONT></TD></TR></TABLE>>]
+  wprev [style="filled,dashed", label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD>w<SUB>i,k−1</SUB></TD></TR><TR><TD><FONT POINT-SIZE="10">calling on the previous occasion</FONT></TD></TR></TABLE>>, color="#E65100", penwidth=2]
+  e_psi [label=<logit ψ<SUB>i</SUB> = <B>x</B><SUB>i</SUB><SUP>T</SUP><B>β</B>>]
+  e_th  [label=<logit θ<SUB>ik</SUB> = <B>d</B><SUB>ik</SUB><SUP>T</SUP><B>α</B> + α<SUB>w</SUB>w<SUB>i,k−1</SUB> + u<SUB>r[i]</SUB>>]
+  e_mu0 [label=<μ<SUB>0,ik</SUB> = λ<SUB>0</SUB> + <B>g</B><SUB>ik</SUB><SUP>T</SUP><B>γ</B><SUB>0</SUB>>]
+  e_mu1 [label=<μ<SUB>1,ik</SUB> = λ<SUB>0</SUB> + Δ<SUB>s</SUB> + <B>g</B><SUB>ik</SUB><SUP>T</SUP><B>γ</B><SUB>1</SUB>>]
+  z     [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD>z<SUB>i</SUB> ~ Bernoulli(ψ<SUB>i</SUB>)</TD></TR><TR><TD><FONT POINT-SIZE="10">occupancy state of site i (marginalized)</FONT></TD></TR></TABLE>>,
+         penwidth=2.6]
+  w     [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD>w<SUB>ik</SUB> ~ Bernoulli(z<SUB>i</SUB>θ<SUB>ik</SUB>)</TD></TR><TR><TD><FONT POINT-SIZE="10">calling on occasion k (marginalized; forward within the night)</FONT></TD></TR></TABLE>>,
+         penwidth=2.6]
+
+  // ---------------- Responses ----------------
+  node [shape=doubleoctagon, style=filled, fillcolor="#FFECB3",
+        color="#E65100", fontcolor="#BF360C"]
+  S  [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD>s<SUB>ik</SUB> = logit(max score)</TD></TR><TR><TD>window scores ~ N(μ<SUB>0,ik</SUB>, σ<SUB>0</SUB>), or N(μ<SUB>1,ik</SUB>, σ<SUB>1</SUB>) with a call</TD></TR><TR><TD><FONT POINT-SIZE="10">maximum of n<SUB>ik</SUB> windows, censored below c</FONT></TD></TR></TABLE>>]
+  Vo [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD>v<SUB>ik</SUB> = w<SUB>ik</SUB></TD></TR><TR><TD><FONT POINT-SIZE="10">occasion fully annotated</FONT></TD></TR></TABLE>>]
+  Vc [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="1" CELLPADDING="1"><TR><TD>clip verdicts</TD></TR><TR><TD><FONT POINT-SIZE="10">positive ⇒ w<SUB>ik</SUB> = 1; negative: clip score ~ N(μ<SUB>0,ik</SUB>, σ<SUB>0</SUB>)</FONT></TD></TR></TABLE>>]
+
+  // ---------------- Edges: priors -> parameters ----------------
+  P_beta  -> beta  [style=dashed, color="#9C27B0"]
+  P_alpha -> alpha [style=dashed, color="#9C27B0"]
+  P_sig   -> sig   [style=dashed, color="#9C27B0"]
+  P_score -> score [style=dashed, color="#9C27B0"]
+
+  // ---------------- Edges: latent structure ----------------
+  sig -> u [color="#2E7D32"]
+
+  // ---------------- Edges: linear predictors ----------------
+  beta  -> e_psi
+  X     -> e_psi [color="#1565C0"]
+  alpha -> e_th
+  A     -> e_th  [color="#1565C0"]
+  u     -> e_th  [color="#2E7D32"]
+  wprev -> e_th  [color="#E65100", style=dashed]
+  score -> e_mu0
+  score -> e_mu1 [label=<  Δ<SUB>s</SUB> &gt; 0 keeps μ<SUB>1</SUB> &gt; μ<SUB>0</SUB> at the reference>, fontsize=10, fontcolor="#5F6B7A"]
+  G     -> e_mu0 [color="#E65100"]
+  G     -> e_mu1 [color="#E65100"]
+  e_psi -> z     [color="#2E7D32"]
+  z     -> w     [color="#2E7D32", penwidth=1.6]
+  e_th  -> w     [color="#2E7D32"]
+
+  // ---------------- Edges: responses ----------------
+  w     -> S  [color="#E65100", penwidth=1.6]
+  e_mu0 -> S  [color="#E65100"]
+  e_mu1 -> S  [color="#E65100", label=<  if w<SUB>ik</SUB> = 1>, fontsize=10, fontcolor="#E65100"]
+  N     -> S  [color="#1565C0"]
+  w     -> Vo [color="#E65100", penwidth=1.6]
+  w     -> Vc [color="#E65100", penwidth=1.6]
+  e_mu0 -> Vc [color="#E65100", style=dashed]
+
+  // ---------------- Ranks and column order ----------------
+  {rank=source; P_beta; P_sig; P_alpha; P_score}
+  {rank=same;   beta; sig; alpha; score}
+  {rank=same;   X; u; A; wprev; G}
+  {rank=same;   e_psi; e_th; e_mu0; e_mu1}
+  {rank=same;   z; N}
+  {rank=same;   w}
+  {rank=sink;   Vo; Vc; S}
+  P_beta -> P_sig -> P_alpha -> P_score [style=invis]
+  beta -> sig -> alpha -> score         [style=invis]
+  X -> u -> A -> wprev -> G             [style=invis]
+  e_psi -> e_th -> e_mu0 -> e_mu1       [style=invis]
+  z -> N                                [style=invis]
+  Vo -> Vc -> S                         [style=invis]
+}

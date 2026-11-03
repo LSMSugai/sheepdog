@@ -1,5 +1,264 @@
 # sheepdog (development version)
 
+- `post_validation()` reads the verdicts of the review app: with
+  `verdicts_file` (and optionally `reviewer`) it takes the verdicts from
+  `run_app()` instead of the review folders, combines clips reviewed by
+  more than one reviewer with `consensus_verdicts()` and writes the same
+  outputs. `review_dir` is then optional and only fills `reviewed_path`.
+- `precision_by_bin()` adds `precision_weighted` and `suggest_thresholds()`
+  adds `precision_weighted_at_threshold` when the reviewed clips carry
+  `inclusion_prob` (`"random_detections"`): the precision weighted by
+  `1 / inclusion_prob`, which estimates the precision among all the
+  predictions rather than among the reviewed clips. The thresholds are
+  still chosen from the unweighted precision, and tables without
+  `inclusion_prob` are unchanged.
+- `app_verdicts()` reports how many clips a reviewer marked more than once
+  and how many of them changed verdict (the last verdict counts).
+- New `list_recordings()`: builds the list of all recordings (`site`,
+  `source_audio`) from the audio folders, including those without any
+  prediction, for `recordings` in `select_clips()`,
+  `export_occupancy_data()` and `run_app()`. The site is the first folder
+  below the root; `remap_from`/`remap_to` rewrite the prefix to match
+  `Begin Path`, and `predictions` checks that the audio files of the
+  predictions are in the list. It can write `recordings.csv` (#81).
+- New article, "Organising the data": the folder layout sheepdog expects,
+  file names, the paths written by BirdNET and the list of recordings.
+- New `calibrated_thresholds()`: confidence thresholds per site and species
+  from the calibration model of stage 2 (`fit_calibration()`), following
+  Wood & Kahl (2024), instead of from the reviewed clips of each cell
+  alone as in `suggest_thresholds()`. `rule = "probability"` gives the
+  lowest score at which P(TP) reaches the target; `rule = "precision"` the
+  lowest score at which the expected precision of the detections kept,
+  from `score_detections()`, reaches it. With a `brms` model, a
+  conservative threshold from the lower quantile of the posterior is
+  added. The calibration vignette has a new section. The default target,
+  0.95, is the `p_min` of `score_detections()` and `calibrate()`.
+- `calibrate()` writes `thresholds.csv` and returns `thresholds`: the
+  `calibrated_thresholds()` of each site x species with
+  `rule = "probability"` and `target = p_min`, the score equivalent of the
+  cut on P(TP) used for the detection histories.
+- The sampling-designs vignette opens with a figure that matches each
+  design to the question it answers, and the calibration vignette has a
+  guide to choosing a confidence threshold.
+- `read_selection_tables()` also reads the per-audio selection tables that
+  the BirdNET GUI writes by default (`<audio>.BirdNET.selection.table.txt`,
+  new argument `per_audio_pattern`), besides the combined table of each
+  site (`BirdNET_SelectionTable.txt`, written when "Combine selection
+  tables" is checked). The per-audio tables of a folder are stacked and the
+  `Selection` column is renumbered, which gives the same result as the
+  combined table. `score_detections()`, `calibrate()` and
+  `extract_validation_clips()` accept them too: in `tables` and
+  `prediction_tables`, give the folder of a site instead of the path of
+  its combined table. The vignettes say where each format comes from.
+- `export_occupancy_data(species = )` now filters by the species asked
+  for. The argument was masked by the `species` column of the predictions,
+  so any value left no prediction and stopped the export. `select_clips()`
+  uses the same filter and is protected the same way.
+- `export_occupancy_data()` gains `min_verified` (default 10) and warns
+  about species with predictions but fewer reviewed detection clips, or
+  without any positive or any negative clip: their false-positive rates
+  will rest on the other species or on the prior. A simulation in
+  `dev/verification-by-species/` shows that no sampling design of
+  `select_clips()` gives a truly rare species enough reviewed clips.
+- New fixture of the data contract, `tests/testthat/fixtures/export-1.3-ms`
+  (built by `data-raw/make_export_fixture_ms.R`), shared with crywolf for its
+  multi-species model: three species of the example data, one of them rare
+  (detected at two sites, 15 reviewed clips per site), with a calibration on
+  temperature and species and site x species effects. The contract tests
+  check that every table and the occasion versions keep their keys by
+  species, and that crywolf reads each species with the versions of the
+  export.
+- `dev/roadmap-integration.md`: CRAN submissions of sheepdog 3.3.2 and
+  crywolf 2.1.0, and steps 5 to 7 of `crywolf::fp_occu_dyn()`.
+- `dev/roadmap-integration.md`: step 8 of `crywolf::fp_occu_dyn()` (blocked
+  cross-validation on the Curiango data) and the multi-species model
+  (phase 5) moved ahead of phase 2, with the sheepdog side of it: a
+  multi-species fixture of the data contract and a check of verification
+  per species.
+
+# sheepdog 3.3.3
+
+Resubmission to CRAN, answering the review of 3.3.2. The installed code is
+the same as 3.3.2.
+
+- DESCRIPTION cites the methods the package implements: the
+  multiple-method (Miller et al. 2011) and observation-confirmation
+  (Chambert et al. 2015) designs and the conversion of confidence
+  scores into probabilities (Wood & Kahl 2024).
+- `Additional_repositories` lists only https://diogoprov.r-universe.dev
+  (for crywolf, in Suggests); the repository of cmdstanr, which sheepdog
+  does not use, is no longer declared.
+
+# sheepdog 3.3.2
+
+Submission candidate for CRAN, replacing 3.3.1 (never uploaded).
+
+- `occasion_draws()` reads `calibration_draws.parquet` without memory
+  mapping, so the file is no longer locked on Windows after the call (it
+  could not be removed or replaced, and a test failed on win-builder).
+
+# sheepdog 3.3.1
+
+Submission candidate for CRAN, replacing 3.3.0 (never uploaded). The
+installed package is the same as 3.3.0, apart from the vignette below.
+
+- `vignette("crywolf-integration")` cites the Curiango article as
+  accepted, without its DOI, which the publisher has not yet registered (the
+  link failed the URL check).
+
+## Repository only
+
+- Test coverage is uploaded to Codecov, with a badge in the README; the
+  coverage checks are informational and never block a merge.
+- `dev/benchmarks/curiango-export.R`: `CALIB_COVARIATE` adds a night
+  covariate to the calibration (schema 1.3) and `ADAPT_DELTA` is passed to
+  brms; `curiango-flow.R` reads such exports and takes `CLASSIFIERS`. On
+  the Curiango, a calibration with night temperature restores the
+  temperature effect on occupancy that the Monte Carlo path had lost with
+  the custom classifier.
+- `dev/benchmarks/`: `curiango-mc-stability.R` (choice of the number of
+  versions M of the Monte Carlo propagation) and `curiango-fig4-mc.R` (the
+  Monte Carlo path beside the threshold paths of the Curiango article);
+  `curiango-flow.R` can save the draws of each fit (`DRAWS_DIR`).
+- `inst/benchmarks/curiango-mc-stability.csv`: stability of the pooled
+  Monte Carlo summaries of the Curiango by number of versions (M = 2-50).
+  Rule of thumb, from a pilot run: M = 100 x the largest between-fit share
+  of the variance keeps the Monte Carlo error under 10% of the posterior SD.
+
+# sheepdog 3.3.0
+
+This release adds the data contract with the crywolf package and the
+Monte Carlo propagation of the calibration (phases 0 and 1 of the
+integration), a local app to draw, review and export clips, and the
+splits and checks for retraining BirdNET-Analyzer.
+
+- Integration with crywolf: `export_occupancy_data()` (schema
+  `sheepdog-occupancy` 1.1-1.3), `occasion_draws()`, `calibration_ppc()`,
+  `covariate_bins()` and a contract test against crywolf.
+- Review: `run_app()`, `app_verdicts()` and `review_support()`.
+- Retraining: `build_training_set()` with splits by night, a validation
+  set by night, a cap per site x species and non-event negatives;
+  `training_nights()` and `exclude_training_clips()` by recording or
+  night.
+
+## All changes
+
+- `build_training_set()` gains `negatives_folder`: with a non-event class
+  of BirdNET-Analyzer (e.g. `"Noise"`), every negative goes to that
+  folder, named `<species>-<site>-<clip_file>`, instead of a
+  `-<species_code>` folder. In BirdNET-Analyzer 2.4.0 those folders get
+  the label -1, which makes the loss unbounded and inflates the
+  validation AUPRC (BirdNET-Analyzer issue 1033); the documentation
+  recommends `"Noise"` until this is fixed. `NULL`, the default, keeps the
+  previous layout.
+- `build_training_set()` gains `val_prop` and `val_seed`: a validation set
+  by night, drawn from the training nights left after the test draw and
+  the cap, never from `exclude_from_test`, written to `val/` to be passed
+  as `--test_data`. It gives the same split as a second call on the
+  training rows (checked on the FrogNet M3 training set: 288 nights and
+  824 clips). The checks gain `val_nights_in_train` and
+  `val_nights_excluded`.
+- `run_app()` gains the Sampling and Export tabs, opened with
+  `selection_dir` and `output_dir`. Sampling is a form for the design of
+  `select_clips()`: *Draw* shows the clips per site and species and their
+  inclusion probabilities, and warns that `"top"` clips do not estimate
+  the false-positive rate; *Cut clips* calls `cut_clips()` (or simulates
+  it) and writes `clip_manifest.csv`, `extraction_info.csv` and `clips/`,
+  and the new clips go straight to the Review tab. Export calls
+  `export_occupancy_data()` with the verdicts of the app (combined by
+  `consensus_verdicts()` across reviewers) and shows the summary of
+  `schema.json`. New arguments `recordings` and `classifier`;
+  `run_app(manifest, clips_dir)` works as before.
+- New `run_app()`: a local 'shiny' app to review the clips one at a time,
+  with spectrogram, player, the data of each clip and keyboard shortcuts
+  (`p`, `n`, `u`, arrows); `max_freq` limits the spectrogram band. Each
+  verdict (`"positive"`, `"negative"` or
+  `"uncertain"`) is appended at once to a CSV file, so an interrupted review
+  resumes where it stopped; with a manifest from `assign_reviewers()`, each
+  reviewer sees only their clips. New `app_verdicts()` turns that file into
+  the table of `classify_review()`, so the rest of stage 1, the agreement
+  between reviewers and the calibration work unchanged. New article
+  "Sampling, reviewing and exporting in the sheepdog app". 'shiny' joins Suggests.
+- `exclude_training_clips()` with a table of `training_nights()` and
+  `level = "recording"` reads `source_audio` with the pattern given to
+  `training_nights()` (kept in the attribute `"pattern"` of its table), or
+  with the new argument `pattern`, instead of always the default pattern;
+  it warns when no `source_audio` matches, instead of excluding nothing in
+  silence.
+- `build_training_set()` gains `split`: `"site"` (the previous behaviour,
+  with `test_sites`), `"night"` (a proportion `test_prop` of the nights of
+  each site goes to the test set, for all species together),
+  `"site_species_night"` (nights drawn within site x species, as in the
+  2.x FrogNet scripts; warns, since a night can then be in both sets) and
+  `"none"`. The draws use `seed` and leave the global random number
+  generator as it was. New arguments: `max_per_site_species` (cap on the
+  positive training clips of a site x species, taken from the nights in
+  turn), `exclude_from_test` (nights that must stay out of the test set),
+  `copy = FALSE` (write only `training_set.csv`), `remap_from` /
+  `remap_to` and `strict`. The result gains `night` and the attribute
+  `"checks"`: test nights with training clips, test nights in
+  `exclude_from_test` and test clips overlapping training clips. On the
+  FrogNet M3 data, the result is identical clip by clip to the reference
+  script for `split = "night"` and `"site_species_night"`.
+- New `training_nights()`: site, recording and night from the names of
+  training clips (a configurable regular expression, folders listed
+  recursively, `site_map`, `night_cutoff`), for `exclude_from_test` and
+  `exclude_training_clips()`.
+- `exclude_training_clips()` gains `level` (`"clip"`, the previous
+  behaviour, `"recording"` or `"night"`) and `any_species`, and takes the
+  table of `training_nights()`.
+- The README figures are redrawn (`data-raw/diagram_pipeline.R`,
+  `data-raw/diagram_extraction.R`): the pipeline shows the reviewers, the
+  model selection by log-loss, the Bayesian calibration and its checks,
+  `review_support()`, `cell_status()`, `community_matrices_draws()` and the
+  occupancy branch (`export_occupancy_data()` > `occasion_draws()` >
+  crywolf); the extraction flow shows the strata of `"random_detections"`
+  and `covariate_bins()`. The README function table lists `covariate_bins()`,
+  `review_support()`, `calibration_ppc()`, `export_occupancy_data()` and
+  `occasion_draws()`.
+- The contract test reads the fixture `export-1.3` in crywolf as well (with
+  crywolf >= 2.1.0.9000): `fp_draws_data()` returns the versions of
+  `occasion_draws.parquet` and refuses a different seed.
+- New `review_support()`: for each site x species cell, the reviewed
+  clips at high scores, their precision, the high-score detections not yet
+  reviewed, the threshold of `suggest_thresholds()` and a diagnosis
+  (`"reached"`, `"exhausted"`, `"unreliable"`, `"review more"`,
+  `"not reviewed"`). It replaces the code of the `support` table of
+  `vignette("validation-effort")` and gives the same result. With `by` and
+  `covariates` (e.g. from `covariate_bins()`), the diagnosis is repeated
+  within the bins of an environmental gradient or acoustic index, counting
+  the unreviewed detections by bin too.
+- `export_occupancy_data()` exports a calibration on continuous covariates
+  of the occasion (`tp ~ logit_conf + temp_z`), schema `sheepdog-occupancy`
+  1.3: P(TP) is computed for each prediction, the versions of the
+  detections are drawn in the export and written to
+  `occasion_draws.parquet`, and `calibration_draws.parquet` is not written.
+  `schema.json` records the covariates (`calibration$covariates`), their
+  range in the calibration data and their standardisation
+  (`covariate_scaling`). New arguments `n_versions`, `rule`, `p_min` and
+  `covariate_scaling`; without covariates, `n_versions` calls
+  `occasion_draws()` on the folder (schema 1.2). `occasion_draws()` refuses
+  a folder of schema 1.3, which has no grid. New fixture
+  `tests/testthat/fixtures/export-1.3`, checked by the contract test. Agreed
+  with crywolf (`dev/proposal-calibration-covariates.md` there), which
+  will read version 1.3 later.
+- `calibration_prior()` gives other population-level terms, such as a
+  continuous covariate, a `normal(0, 1)` prior; the slope of `logit_conf`
+  then keeps `normal(1, 1)` without the truncation at 0, since 'brms'
+  cannot bound a single coefficient.
+- New `covariate_bins()` cuts a covariate of the occasions (an
+  environmental gradient, such as the temperature of the night, or an
+  acoustic index of the recording or minute) into bins, by default
+  quantiles within each site. `select_clips()` gains `covariates`, so that
+  the `"random_detections"` draw can be stratified by those bins
+  (`strata = "temp_bin"`) with exact inclusion probabilities, and a message
+  recalls that a stratum related to the verdict should enter the
+  calibration. `precision_by_bin()`, `suggest_thresholds()` and
+  `cell_status()` gain `by`, to check each site x species cell within the
+  bins. `vignette("validation-effort")` has a new section, "Stage 1 along a
+  gradient", with both examples and their caveats.
+- `man/sheepdog-package.Rd` lists the three authors (it was not
+  regenerated when `Authors@R` changed).
 - `vignette("crywolf-integration")`: the Curiango data come from seven
   recorders, not four, and the calibration model is chosen among three
   candidates, not two.

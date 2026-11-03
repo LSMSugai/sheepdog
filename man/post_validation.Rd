@@ -5,19 +5,24 @@
 \title{Summarise the manual validation}
 \usage{
 post_validation(
-  review_dir,
+  review_dir = NULL,
   manifest_path,
   output_dir,
   positive_pattern = "positiv",
   negative_pattern = "negativ",
   bins = seq(0.1, 1, by = 0.1),
   target_precision = 0.9,
-  min_n = 15
+  min_n = 15,
+  verdicts_file = NULL,
+  reviewer = NULL
 )
 }
 \arguments{
-\item{review_dir}{Folder with the reviewed clips (the \code{clips} folder of
-the validation package, after the review).}
+\item{review_dir}{Folder with the reviewed clips. For a review in the
+BirdNET GUI, the \code{clips} folder after the review, whose subfolders
+give the verdicts. With \code{verdicts_file}, optional: the folder of the
+clips, used to fill \code{reviewed_path} (needed by \code{\link[=retraining_clips]{retraining_clips()}}
+and \code{\link[=build_training_set]{build_training_set()}}).}
 
 \item{manifest_path}{Path to the manifest of the same run as the
 reviewed clips (\code{clip_manifest.csv}, or a v1.2.0
@@ -35,17 +40,24 @@ the path of each clip.}
 
 \item{min_n}{Minimum of reviewed clips for a bin to be taken seriously;
 bins with fewer are flagged in \code{low_support}.}
+
+\item{verdicts_file}{Optional verdicts file written by \code{\link[=run_app]{run_app()}}, used
+instead of the subfolders of \code{review_dir}.}
+
+\item{reviewer}{With \code{verdicts_file}, optional reviewer(s) whose
+verdicts are used, as in \code{\link[=app_verdicts]{app_verdicts()}}.}
 }
 \value{
 A list with the tables \code{validation}, \code{precision}, \code{thresholds},
 \code{presence} and \code{retraining}, invisibly.
 }
 \description{
-Runs the whole post-validation step: classifies the reviewed clips and
-writes, to \code{output_dir}:
+Runs the whole post-validation step: reads the verdicts of the reviewed
+clips and writes, to \code{output_dir}:
 \itemize{
 \item \code{validation_by_clip.csv}: manifest + verdict of each clip
-(\code{\link[=classify_review]{classify_review()}});
+(\code{\link[=classify_review]{classify_review()}} for a review in the BirdNET GUI, \code{\link[=app_verdicts]{app_verdicts()}}
+for a review in \code{\link[=run_app]{run_app()}});
 \item \code{precision_by_bin.csv}: precision by species x confidence bin
 (\code{\link[=precision_by_bin]{precision_by_bin()}});
 \item \code{suggested_thresholds.csv}: lowest confidence reaching the target
@@ -59,5 +71,17 @@ precision, by species (\code{\link[=suggest_thresholds]{suggest_thresholds()}});
 }
 }
 \details{
+The verdicts come from the folders of a review in the BirdNET GUI
+(\code{review_dir}) or from the verdicts file of \code{\link[=run_app]{run_app()}}
+(\code{verdicts_file}). In the second case, a clip marked more than once
+keeps the last verdict of each reviewer, and clips reviewed by more than
+one reviewer are combined with \code{\link[=consensus_verdicts]{consensus_verdicts()}}: conflicting
+verdicts become \code{"disagreement"} and, like \code{"uncertain"}, are left out of
+the precision and the thresholds.
+
+With \code{inclusion_prob} in the manifest (clips of \code{"random_detections"}),
+the precision tables also give the precision weighted by
+\code{1 / inclusion_prob}; see \code{\link[=precision_by_bin]{precision_by_bin()}}.
+
 This is the function form of the v1.2.0 script \code{pos_validacao.R}.
 }

@@ -5,13 +5,16 @@
 #' @import purrr
 #' @import stringr
 #' @import tidyr
-#' @importFrom readr read_csv read_tsv write_csv
+#' @importFrom readr col_character cols read_csv read_tsv type_convert
+#'   write_csv
 #' @importFrom stats setNames
 #' @importFrom tibble tibble
 NULL
 
 # Colunas usadas via tidy evaluation (evita NOTEs do R CMD check)
 utils::globalVariables(c(
+  ".cell", ".env", "n_high", "n_fp", "n_high_all", "prec_high", "unreviewed_high",
+  "diagnosis", ".sp", ".rodada", ".desempate", "recording", "time",
   ".g", ".confiavel", "pr_reliable", "p_tp_lower", "draw", "max_rhat",
   "min_ess_bulk", "min_ess_tail", "n_divergent", "n", 
   ".N", ".dur", ".dia", ".n", ".ordem", ".p1", ".p2", "begin_path",

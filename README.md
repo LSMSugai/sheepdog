@@ -3,6 +3,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22696210.svg)](https://doi.org/10.5281/zenodo.22696210)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
 [![r-universe](https://diogoprov.r-universe.dev/sheepdog/badges/version)](https://diogoprov.r-universe.dev/sheepdog)
+[![Codecov](https://codecov.io/gh/diogoprov/sheepdog/graph/badge.svg)](https://app.codecov.io/gh/diogoprov/sheepdog)
 
 In the fable, the boy cries "wolf!" and the villagers have to decide whether
 the wolf is real. **sheepdog** does that check for automated predictions from
@@ -11,20 +12,25 @@ in passive acoustic monitoring (PAM). It runs three stages:
 
 1. **Validation data.** Build clip sets for manual review from the output BirdNET
    selection tables: top-score, random-occasion or random-recording designs,
-   one folder per species, ready for the review tab of the BirdNET GUI. Then
+   one folder per species, ready for the review tab of the BirdNET GUI. The
+   random draws can be stratified along an environmental gradient. Then
    summarise the reviewed clips: precision by confidence bin, suggested
-   thresholds, confirmed presence by night and clips for retraining.
+   thresholds, confirmed presence by night, clips for retraining and the
+   cells that still need review.
 2. **Calibration.** Turn confidence scores into probabilities of true
    detection with hierarchical logistic models (species and site x species
-   effects, compared by cross-validation). Score every detection and build
-   nightly detection histories.
+   effects, compared by cross-validation), fitted with 'lme4' or, in a
+   Bayesian framework, with 'brms'. Score every detection and build nightly
+   detection histories.
 3. **Community matrices.** Turn the calibrated histories into
    effort-standardised site x month matrices for multivariate ordinations.
 
 sheepdog was developed for the FrogNet project (anurans of the Pantanal and
 Cerrado, Mato Grosso do Sul, Brazil), but it works with the output of any
-BirdNET pretrained and custom classifier. Its validation outputs feed occupancy models with
-false positives fitted with [crywolf](https://github.com/diogoprov/crywolf).
+BirdNET pretrained and custom classifier. `export_occupancy_data()` writes its
+validation and calibration outputs in a documented format for occupancy models
+with false positives, such as those fitted with
+[crywolf](https://github.com/diogoprov/crywolf).
 The two packages are independent: sheepdog does not depend on crywolf.
 
 ![The three stages of sheepdog](man/figures/pipeline.png)
@@ -119,12 +125,14 @@ Each stage is also available as separate functions:
 
 | Stage | Functions |
 |---|---|
-| 1. Selecting and cutting clips | `read_selection_tables()`, `select_clips()` (a pure function that returns the clip manifest without touching audio), `cut_clips()`, `pack_clips()` |
+| 1. Selecting and cutting clips | `read_selection_tables()`, `select_clips()` (a pure function that returns the clip manifest without touching audio), `covariate_bins()` (strata along a gradient), `cut_clips()`, `pack_clips()` |
+| 1. Review app | `run_app()` (local 'shiny' app: draw and cut the clips, review them with spectrogram, player and keyboard verdicts written to a CSV, and export the occupancy tables), `app_verdicts()` |
 | 1. Several reviewers | `assign_reviewers()`, `split_by_reviewer()`, `reviewer_agreement()` (Cohen's or Fleiss' kappa), `consensus_verdicts()` |
-| 1. After the review | `classify_review()`, `precision_by_bin()`, `suggest_thresholds()`, `nightly_presence()`, `retraining_clips()`, `read_validation_tables()` |
+| 1. After the review | `classify_review()`, `precision_by_bin()`, `suggest_thresholds()`, `nightly_presence()`, `retraining_clips()`, `read_validation_tables()`, `review_support()` (cells, or bins, that still need review) |
 | 1. Retraining | `build_training_set()` (training folders for BirdNET-Analyzer), `exclude_training_clips()` |
 | 2. Calibration | `read_validations()`, `calibration_models()`, `calibration_folds()`, `compare_calibration_models()`, `select_calibration_model()`, `fit_calibration()`, `calibration_effort()`, `score_detections()`, `detection_history()`, `summarise_history()` |
-| 2. Bayesian calibration | `calibration_prior()`, `prior_predictive_calibration()`, `calibration_diagnostics()`, `calibration_sensitivity()`, `plot_calibration_draws()`, `history_draws()` |
+| 2. Bayesian calibration | `calibration_prior()`, `prior_predictive_calibration()`, `calibration_diagnostics()`, `calibration_ppc()`, `plot_calibration_ppc()`, `calibration_sensitivity()`, `plot_calibration_draws()`, `history_draws()` |
+| Occupancy data | `export_occupancy_data()` (schema `sheepdog-occupancy`), `occasion_draws()` (one detection data set per posterior draw) |
 | 3. Community matrices | `cell_status()`, `suggest_core_species()`, `community_matrices()`, `community_matrices_draws()` |
 
 The [articles](https://provetelab.org/sheepdog/articles/) cover each stage
@@ -200,6 +208,13 @@ files are in `system.file("extdata", package = "sheepdog")`. Do not pass the
 whole-recording clips of `"random_recordings"` (`confidence = NA`) to the
 `validation` argument of `crywolf::fp_aggregate()`: they are the second method
 (manual annotation), not confirmations of detections.
+
+`export_occupancy_data()` writes occasions, detections, verdicts and, with a
+Bayesian calibration, its posterior draws to one folder, described by
+`schema.json` (schema `sheepdog-occupancy`). `occasion_draws()` turns that
+folder into one detection data set per posterior draw, so that any occupancy
+software can propagate the uncertainty of the calibration; crywolf reads the
+folder directly.
 
 ## From the scripts (v1.2.0) to the package (v2.0.0)
 

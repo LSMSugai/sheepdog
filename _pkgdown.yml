@@ -2,6 +2,7 @@ url: https://provetelab.org/sheepdog/
 
 template:
   bootstrap: 5
+  math-rendering: mathjax
   bslib:
     primary: "#241042"
 
@@ -20,7 +21,9 @@ reference:
     contents:
       - extract_validation_clips
       - read_selection_tables
+      - list_recordings
       - select_clips
+      - covariate_bins
       - cut_clips
       - pack_clips
   - title: Stage 1 - After the review
@@ -30,12 +33,19 @@ reference:
       - classify_review
       - precision_by_bin
       - suggest_thresholds
+      - review_support
       - nightly_presence
       - retraining_clips
       - plot_precision
       - read_validation_tables
       - build_training_set
       - exclude_training_clips
+      - training_nights
+  - title: Stage 1 - Review app
+    desc: Review the clips in a local app and read its verdicts.
+    contents:
+      - run_app
+      - app_verdicts
   - title: Stage 1 - Several reviewers
     desc: Split the clips among reviewers, measure their agreement and combine their verdicts.
     contents:
@@ -55,6 +65,7 @@ reference:
       - fit_calibration
       - calibration_effort
       - score_detections
+      - calibrated_thresholds
       - detection_history
       - summarise_history
       - plot_calibration
@@ -90,8 +101,10 @@ articles:
   - title: The three stages
     navbar: The three stages
     contents:
+      - organising-data
       - sampling-designs
       - articles/reviewing-in-the-gui
+      - articles/review-app
       - validation-effort
       - calibration
       - bayesian-calibration

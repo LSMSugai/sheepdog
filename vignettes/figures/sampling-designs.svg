@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" width="1000" height="500" role="img" aria-labelledby="t d">
+<title id="t">What each sampling design of select_clips() sends to review</title>
+<desc id="d">The same night of twelve hourly recordings is shown three times. Top keeps the highest-scoring prediction of each recording. Random_detections draws recordings with a detection above the threshold and reviews every detection in them. Random_recordings draws recordings among all, including ones without predictions, and annotates them by ear.</desc>
+<rect x="0.0" y="0.0" width="1000.0" height="500.0" fill="#ffffff" stroke="none" stroke-width="1"/>
+<text x="270.0" y="22.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#9a9a9a" text-anchor="start" font-weight="normal" font-style="normal">sampling_mode</text>
+<text x="790.0" y="22.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11" fill="#9a9a9a" text-anchor="start" font-weight="normal" font-style="normal">use</text>
+<text x="16.0" y="56.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="15" fill="#222222" text-anchor="start" font-weight="bold" font-style="normal">A</text>
+<text x="38.0" y="56.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" fill="#222222" text-anchor="start" font-weight="bold" font-style="normal">"top"</text>
+<text x="38.0" y="74.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9a9a9a" text-anchor="start" font-weight="normal" font-style="italic">highest score per hour</text>
+<line x1="287.0" y1="136.0" x2="287.0" y2="107.3" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="287.0" cy="107.3" r="2.6" fill="#9a9a9a"/>
+<line x1="293.0" y1="136.0" x2="293.0" y2="85.2" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="293.0" cy="85.2" r="3.6" fill="#c4501b"/>
+<line x1="324.0" y1="136.0" x2="324.0" y2="69.6" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="324.0" cy="69.6" r="3.6" fill="#c4501b"/>
+<line x1="330.0" y1="136.0" x2="330.0" y2="99.9" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="330.0" cy="99.9" r="2.6" fill="#9a9a9a"/>
+<line x1="336.0" y1="136.0" x2="336.0" y2="88.4" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="336.0" cy="88.4" r="2.6" fill="#9a9a9a"/>
+<line x1="364.0" y1="135.0" x2="376.0" y2="135.0" stroke="#bdbdbd" stroke-width="1" stroke-dasharray="2 2"/>
+<line x1="410.0" y1="136.0" x2="410.0" y2="113.0" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="410.0" cy="113.0" r="3.6" fill="#c4501b"/>
+<line x1="447.0" y1="136.0" x2="447.0" y2="60.6" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="447.0" cy="60.6" r="3.6" fill="#c4501b"/>
+<line x1="453.0" y1="136.0" x2="453.0" y2="77.8" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="453.0" cy="77.8" r="2.6" fill="#9a9a9a"/>
+<line x1="481.0" y1="136.0" x2="481.0" y2="93.4" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="481.0" cy="93.4" r="2.6" fill="#9a9a9a"/>
+<line x1="487.0" y1="136.0" x2="487.0" y2="108.9" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="487.0" cy="108.9" r="2.6" fill="#9a9a9a"/>
+<line x1="493.0" y1="136.0" x2="493.0" y2="81.9" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="493.0" cy="81.9" r="3.6" fill="#c4501b"/>
+<line x1="499.0" y1="136.0" x2="499.0" y2="97.5" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="499.0" cy="97.5" r="2.6" fill="#9a9a9a"/>
+<line x1="524.0" y1="135.0" x2="536.0" y2="135.0" stroke="#bdbdbd" stroke-width="1" stroke-dasharray="2 2"/>
+<line x1="567.0" y1="136.0" x2="567.0" y2="104.0" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="567.0" cy="104.0" r="2.6" fill="#9a9a9a"/>
+<line x1="573.0" y1="136.0" x2="573.0" y2="63.8" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="573.0" cy="63.8" r="3.6" fill="#c4501b"/>
+<line x1="610.0" y1="136.0" x2="610.0" y2="116.3" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="610.0" cy="116.3" r="3.6" fill="#c4501b"/>
+<line x1="647.0" y1="136.0" x2="647.0" y2="89.3" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="647.0" cy="89.3" r="2.6" fill="#9a9a9a"/>
+<line x1="653.0" y1="136.0" x2="653.0" y2="75.3" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="653.0" cy="75.3" r="3.6" fill="#c4501b"/>
+<line x1="684.0" y1="135.0" x2="696.0" y2="135.0" stroke="#bdbdbd" stroke-width="1" stroke-dasharray="2 2"/>
+<line x1="727.0" y1="136.0" x2="727.0" y2="110.6" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="727.0" cy="110.6" r="2.6" fill="#9a9a9a"/>
+<line x1="733.0" y1="136.0" x2="733.0" y2="95.8" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="733.0" cy="95.8" r="3.6" fill="#c4501b"/>
+<line x1="270.0" y1="136.0" x2="750.0" y2="136.0" stroke="#222222" stroke-width="1"/>
+<line x1="262.0" y1="136.0" x2="262.0" y2="54.0" stroke="#bdbdbd" stroke-width="1"/>
+<text x="258.0" y="140.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#9a9a9a" text-anchor="end" font-weight="normal" font-style="normal">0</text>
+<text x="258.0" y="58.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#9a9a9a" text-anchor="end" font-weight="normal" font-style="normal">1</text>
+<text transform="translate(248,95.0) rotate(-90)" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#9a9a9a" text-anchor="middle">confidence</text>
+<text x="790.0" y="56.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">classifier retraining;</text>
+<text x="790.0" y="72.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">score calibration.</text>
+<text x="790.0" y="88.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">Not a random sample:</text>
+<text x="790.0" y="104.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">no false-positive rate.</text>
+<text x="16.0" y="186.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="15" fill="#222222" text-anchor="start" font-weight="bold" font-style="normal">B</text>
+<text x="38.0" y="186.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" fill="#222222" text-anchor="start" font-weight="bold" font-style="normal">"random_detections"</text>
+<text x="38.0" y="204.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9a9a9a" text-anchor="start" font-weight="normal" font-style="italic">random occasions with a detection</text>
+<line x1="287.0" y1="266.0" x2="287.0" y2="237.3" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="287.0" cy="237.3" r="2.6" fill="#9a9a9a"/>
+<line x1="293.0" y1="266.0" x2="293.0" y2="215.2" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="293.0" cy="215.2" r="2.6" fill="#9a9a9a"/>
+<rect x="312.0" y="174.0" width="36.0" height="92.0" fill="none" stroke="#c4501b" stroke-width="1.2"/>
+<line x1="324.0" y1="266.0" x2="324.0" y2="199.6" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="324.0" cy="199.6" r="3.6" fill="#c4501b"/>
+<line x1="330.0" y1="266.0" x2="330.0" y2="229.9" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="330.0" cy="229.9" r="2.6" fill="#9a9a9a"/>
+<line x1="336.0" y1="266.0" x2="336.0" y2="218.4" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="336.0" cy="218.4" r="3.6" fill="#c4501b"/>
+<line x1="364.0" y1="265.0" x2="376.0" y2="265.0" stroke="#bdbdbd" stroke-width="1" stroke-dasharray="2 2"/>
+<line x1="410.0" y1="266.0" x2="410.0" y2="243.0" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="410.0" cy="243.0" r="2.6" fill="#9a9a9a"/>
+<line x1="447.0" y1="266.0" x2="447.0" y2="190.6" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="447.0" cy="190.6" r="2.6" fill="#9a9a9a"/>
+<line x1="453.0" y1="266.0" x2="453.0" y2="207.8" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="453.0" cy="207.8" r="2.6" fill="#9a9a9a"/>
+<line x1="481.0" y1="266.0" x2="481.0" y2="223.4" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="481.0" cy="223.4" r="2.6" fill="#9a9a9a"/>
+<line x1="487.0" y1="266.0" x2="487.0" y2="238.9" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="487.0" cy="238.9" r="2.6" fill="#9a9a9a"/>
+<line x1="493.0" y1="266.0" x2="493.0" y2="211.9" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="493.0" cy="211.9" r="2.6" fill="#9a9a9a"/>
+<line x1="499.0" y1="266.0" x2="499.0" y2="227.5" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="499.0" cy="227.5" r="2.6" fill="#9a9a9a"/>
+<line x1="524.0" y1="265.0" x2="536.0" y2="265.0" stroke="#bdbdbd" stroke-width="1" stroke-dasharray="2 2"/>
+<line x1="567.0" y1="266.0" x2="567.0" y2="234.0" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="567.0" cy="234.0" r="2.6" fill="#9a9a9a"/>
+<line x1="573.0" y1="266.0" x2="573.0" y2="193.8" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="573.0" cy="193.8" r="2.6" fill="#9a9a9a"/>
+<line x1="610.0" y1="266.0" x2="610.0" y2="246.3" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="610.0" cy="246.3" r="2.6" fill="#9a9a9a"/>
+<rect x="632.0" y="174.0" width="36.0" height="92.0" fill="none" stroke="#c4501b" stroke-width="1.2"/>
+<line x1="647.0" y1="266.0" x2="647.0" y2="219.3" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="647.0" cy="219.3" r="3.6" fill="#c4501b"/>
+<line x1="653.0" y1="266.0" x2="653.0" y2="205.3" stroke="#c4501b" stroke-width="1.6"/>
+<circle cx="653.0" cy="205.3" r="3.6" fill="#c4501b"/>
+<line x1="684.0" y1="265.0" x2="696.0" y2="265.0" stroke="#bdbdbd" stroke-width="1" stroke-dasharray="2 2"/>
+<line x1="727.0" y1="266.0" x2="727.0" y2="240.6" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="727.0" cy="240.6" r="2.6" fill="#9a9a9a"/>
+<line x1="733.0" y1="266.0" x2="733.0" y2="225.8" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="733.0" cy="225.8" r="2.6" fill="#9a9a9a"/>
+<line x1="270.0" y1="266.0" x2="750.0" y2="266.0" stroke="#222222" stroke-width="1"/>
+<line x1="262.0" y1="266.0" x2="262.0" y2="184.0" stroke="#bdbdbd" stroke-width="1"/>
+<text x="258.0" y="270.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#9a9a9a" text-anchor="end" font-weight="normal" font-style="normal">0</text>
+<text x="258.0" y="188.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#9a9a9a" text-anchor="end" font-weight="normal" font-style="normal">1</text>
+<line x1="270.0" y1="225.0" x2="750.0" y2="225.0" stroke="#222222" stroke-width="0.8" stroke-dasharray="4 3"/>
+<text x="748.0" y="220.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#9a9a9a" text-anchor="end" font-weight="normal" font-style="normal">threshold</text>
+<text x="790.0" y="186.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">false-positive rate</text>
+<text x="790.0" y="202.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">(observation-confirmation</text>
+<text x="790.0" y="218.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">design).</text>
+<text x="16.0" y="316.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="15" fill="#222222" text-anchor="start" font-weight="bold" font-style="normal">C</text>
+<text x="38.0" y="316.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" fill="#222222" text-anchor="start" font-weight="bold" font-style="normal">"random_recordings"</text>
+<text x="38.0" y="334.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#9a9a9a" text-anchor="start" font-weight="normal" font-style="italic">random recordings, by ear</text>
+<line x1="287.0" y1="396.0" x2="287.0" y2="367.3" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="287.0" cy="367.3" r="2.6" fill="#9a9a9a"/>
+<line x1="293.0" y1="396.0" x2="293.0" y2="345.2" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="293.0" cy="345.2" r="2.6" fill="#9a9a9a"/>
+<line x1="324.0" y1="396.0" x2="324.0" y2="329.6" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="324.0" cy="329.6" r="2.6" fill="#9a9a9a"/>
+<line x1="330.0" y1="396.0" x2="330.0" y2="359.9" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="330.0" cy="359.9" r="2.6" fill="#9a9a9a"/>
+<line x1="336.0" y1="396.0" x2="336.0" y2="348.4" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="336.0" cy="348.4" r="2.6" fill="#9a9a9a"/>
+<rect x="352.0" y="304.0" width="36.0" height="92.0" fill="#f6dfd3" stroke="none" stroke-width="1"/>
+<line x1="364.0" y1="395.0" x2="376.0" y2="395.0" stroke="#bdbdbd" stroke-width="1" stroke-dasharray="2 2"/>
+<line x1="410.0" y1="396.0" x2="410.0" y2="373.0" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="410.0" cy="373.0" r="2.6" fill="#9a9a9a"/>
+<line x1="447.0" y1="396.0" x2="447.0" y2="320.6" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="447.0" cy="320.6" r="2.6" fill="#9a9a9a"/>
+<line x1="453.0" y1="396.0" x2="453.0" y2="337.8" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="453.0" cy="337.8" r="2.6" fill="#9a9a9a"/>
+<rect x="472.0" y="304.0" width="36.0" height="92.0" fill="#f6dfd3" stroke="none" stroke-width="1"/>
+<line x1="481.0" y1="396.0" x2="481.0" y2="353.4" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="481.0" cy="353.4" r="2.6" fill="#9a9a9a"/>
+<line x1="487.0" y1="396.0" x2="487.0" y2="368.9" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="487.0" cy="368.9" r="2.6" fill="#9a9a9a"/>
+<line x1="493.0" y1="396.0" x2="493.0" y2="341.9" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="493.0" cy="341.9" r="2.6" fill="#9a9a9a"/>
+<line x1="499.0" y1="396.0" x2="499.0" y2="357.5" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="499.0" cy="357.5" r="2.6" fill="#9a9a9a"/>
+<line x1="524.0" y1="395.0" x2="536.0" y2="395.0" stroke="#bdbdbd" stroke-width="1" stroke-dasharray="2 2"/>
+<line x1="567.0" y1="396.0" x2="567.0" y2="364.0" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="567.0" cy="364.0" r="2.6" fill="#9a9a9a"/>
+<line x1="573.0" y1="396.0" x2="573.0" y2="323.8" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="573.0" cy="323.8" r="2.6" fill="#9a9a9a"/>
+<rect x="592.0" y="304.0" width="36.0" height="92.0" fill="#f6dfd3" stroke="none" stroke-width="1"/>
+<line x1="610.0" y1="396.0" x2="610.0" y2="376.3" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="610.0" cy="376.3" r="2.6" fill="#9a9a9a"/>
+<line x1="647.0" y1="396.0" x2="647.0" y2="349.3" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="647.0" cy="349.3" r="2.6" fill="#9a9a9a"/>
+<line x1="653.0" y1="396.0" x2="653.0" y2="335.3" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="653.0" cy="335.3" r="2.6" fill="#9a9a9a"/>
+<line x1="684.0" y1="395.0" x2="696.0" y2="395.0" stroke="#bdbdbd" stroke-width="1" stroke-dasharray="2 2"/>
+<line x1="727.0" y1="396.0" x2="727.0" y2="370.6" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="727.0" cy="370.6" r="2.6" fill="#9a9a9a"/>
+<line x1="733.0" y1="396.0" x2="733.0" y2="355.8" stroke="#9a9a9a" stroke-width="1"/>
+<circle cx="733.0" cy="355.8" r="2.6" fill="#9a9a9a"/>
+<line x1="270.0" y1="396.0" x2="750.0" y2="396.0" stroke="#222222" stroke-width="1"/>
+<line x1="262.0" y1="396.0" x2="262.0" y2="314.0" stroke="#bdbdbd" stroke-width="1"/>
+<text x="258.0" y="400.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#9a9a9a" text-anchor="end" font-weight="normal" font-style="normal">0</text>
+<text x="258.0" y="318.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#9a9a9a" text-anchor="end" font-weight="normal" font-style="normal">1</text>
+<text x="790.0" y="316.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">false-positive and</text>
+<text x="790.0" y="332.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">false-negative rates</text>
+<text x="790.0" y="348.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">(multiple-method design).</text>
+<text x="290.0" y="414.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#9a9a9a" text-anchor="middle" font-weight="normal" font-style="normal">18:00</text>
+<text x="410.0" y="414.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#9a9a9a" text-anchor="middle" font-weight="normal" font-style="normal">21:00</text>
+<text x="530.0" y="414.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#9a9a9a" text-anchor="middle" font-weight="normal" font-style="normal">00:00</text>
+<text x="650.0" y="414.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10" fill="#9a9a9a" text-anchor="middle" font-weight="normal" font-style="normal">03:00</text>
+<text x="510.0" y="432.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" fill="#9a9a9a" text-anchor="middle" font-weight="normal" font-style="normal">one night, one recording per hour</text>
+<circle cx="274" cy="474" r="3.6" fill="#c4501b"/>
+<text x="284.0" y="478.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">prediction sent to review</text>
+<rect x="438.0" y="467.0" width="12.0" height="12.0" fill="none" stroke="#c4501b" stroke-width="1.2"/>
+<text x="456.0" y="478.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">occasion drawn</text>
+<rect x="552.0" y="467.0" width="14.0" height="12.0" fill="#f6dfd3" stroke="none" stroke-width="1"/>
+<text x="572.0" y="478.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">recording annotated by ear</text>
+<line x1="736.0" y1="477.0" x2="748.0" y2="477.0" stroke="#bdbdbd" stroke-width="1" stroke-dasharray="2 2"/>
+<text x="754.0" y="478.0" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" fill="#222222" text-anchor="start" font-weight="normal" font-style="normal">no prediction</text>
+</svg>

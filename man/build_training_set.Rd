@@ -7,41 +7,98 @@
 build_training_set(
   validation,
   output_dir,
+  split = c("site", "night", "site_species_night", "none"),
   test_sites = NULL,
+  test_prop = 0.2,
+  seed = 2026,
+  max_per_site_species = NULL,
+  exclude_from_test = NULL,
+  val_prop = NULL,
+  val_seed = seed + 1,
   negatives = TRUE,
-  min_files = 100
+  negatives_folder = NULL,
+  min_files = 100,
+  copy = TRUE,
+  remap_from = NULL,
+  remap_to = NULL,
+  strict = FALSE
 )
 }
 \arguments{
 \item{validation}{Reviewed clips, as returned by \code{\link[=classify_review]{classify_review()}},
 \code{\link[=post_validation]{post_validation()}} (\verb{$validation}) or \code{\link[=read_validation_tables]{read_validation_tables()}}. It
 needs \code{site}, \code{species_code}, \code{clip_file}, \code{verdict} and
-\code{reviewed_path} (the path where the review left each clip).}
+\code{reviewed_path} (the path where the review left each clip), and
+\code{night} for the splits by night.}
 
-\item{output_dir}{Output folder; \verb{train/} and, with \code{test_sites},
+\item{output_dir}{Output folder; \verb{train/} and, if any clip is held out,
 \verb{test/} are created in it.}
 
-\item{test_sites}{Sites held out for testing. \code{NULL} puts every clip in
-\verb{train/}.}
+\item{split}{How to split the clips into training and test sets; see
+Splits.}
 
-\item{negatives}{Copy the negative clips into \verb{-<species_code>} folders.}
+\item{test_sites}{Sites held out for testing with \code{split = "site"}.
+\code{NULL} puts every clip in \verb{train/}.}
+
+\item{test_prop}{Proportion of the nights of each site (or site x
+species) drawn for the test set.}
+
+\item{seed}{Seed of the draws.}
+
+\item{max_per_site_species}{Optional maximum number of positive
+training clips per site x species. Larger sets are reduced by taking
+clips from the nights in turn, in random order, which keeps as many
+nights as possible. Test clips and negatives are not reduced.}
+
+\item{exclude_from_test}{Optional table with \code{site} and \code{night} (e.g.
+from \code{\link[=training_nights]{training_nights()}}): nights that must not be in the test set,
+such as nights whose recordings trained another classifier that will
+be compared on it. They are left out of the draws of the test and
+validation sets and stay in the training set.}
+
+\item{val_prop}{Optional proportion of the training nights of each site
+drawn for the validation set (\verb{val/}); see Splits. \code{NULL} draws none.}
+
+\item{val_seed}{Seed of the validation draw. The default, \code{seed + 1}, is
+also the seed of \code{max_per_site_species}; the two draws are separate,
+and the default reproduces the training sets of the FrogNet project.}
+
+\item{negatives}{Include the negative clips?}
+
+\item{negatives_folder}{\code{NULL} puts the negatives of each class in a
+\verb{-<species_code>} folder. A non-event class of BirdNET-Analyzer
+(\code{"Noise"}, \code{"Other"}, \code{"Background"} or \code{"Silence"}) puts all of them
+in that folder instead; see Negatives.}
 
 \item{min_files}{Minimum number of positive training files per class
 below which a warning is raised.}
+
+\item{copy}{Copy the clips? With \code{FALSE}, only \code{training_set.csv} is
+written, so that the split can be built on a computer without the
+clips and copied later.}
+
+\item{remap_from, remap_to}{Optional prefix of \code{reviewed_path} and its
+replacement, for clips reviewed on another computer or drive.}
+
+\item{strict}{Raise an error if any check is above 0?}
 }
 \value{
-A tibble with one row per copied clip: \code{site}, \code{species_code},
-\code{verdict}, \code{set} (\code{"train"} or \code{"test"}), \code{class_folder}, \code{clip_file},
-\code{source_audio}, \code{clip_start}, \code{clip_end}, \code{from} and \code{to}, invisibly.
+A tibble with one row per clip: \code{site}, \code{species_code},
+\code{verdict}, \code{set} (\code{"train"}, \code{"val"} or \code{"test"}), \code{class_folder},
+\code{clip_file},
+\code{source_audio}, \code{clip_start}, \code{clip_end}, \code{from}, \code{to} and \code{night},
+invisibly, with the checks in the attribute \code{"checks"}. With
+\code{copy = TRUE}, clips that could not be copied are left out.
 }
 \description{
-Copies the reviewed clips into the folder layout that the training
-script of BirdNET-Analyzer expects: one folder per class, named after
-the label (\code{species_code}, so the retrained classifier keeps the labels
-of the current one), with the negatives of a class in a folder with the
-same name prefixed by \code{-}. Clips of the sites in \code{test_sites} go to a
-separate \code{test} folder, to be passed as \code{--test_data}, so that the new
-classifier is evaluated on sites it was not trained on.
+Splits the reviewed clips into a training and a test set and copies them
+into the folder layout that the training script of BirdNET-Analyzer
+expects: one folder per class, named after the label (\code{species_code}, so
+the retrained classifier keeps the labels of the current one), with the
+negatives of a class in a folder with the same name prefixed by \code{-} (or
+all negatives in one non-event folder; see Negatives). The test clips go
+to a separate \code{test} folder; with \code{val_prop}, a validation set by night
+goes to \code{val}, to be passed as \code{--test_data} (see Splits).
 }
 \details{
 The layout follows the documentation of BirdNET-Analyzer (version
@@ -51,7 +108,79 @@ a warning. Whole-recording clips of \code{"random_recordings"} (longer than
 3 s, \code{confidence} = \code{NA}) are left out: their label says only that the
 species was heard somewhere in the recording.
 
-The table of copied clips is also written to \code{training_set.csv} in
+The table of clips is also written to \code{training_set.csv} in
 \code{output_dir}; keep it with the classifier, to leave these clips out of
 later validation rounds with \code{\link[=exclude_training_clips]{exclude_training_clips()}}.
+}
+\section{Splits}{
+
+Clips of the same night are correlated, so a split by clip leaks
+information from the training into the test set.
+\itemize{
+\item \code{"site"}: the clips of \code{test_sites} form the test set, which then
+measures transfer to sites the classifier was not trained on.
+\item \code{"night"}: in each site, \code{ceiling(n * test_prop)} of its \code{n} nights
+are drawn for the test set, for all species together, so that no
+recording is training data for one species and test data for another.
+\item \code{"site_species_night"}: the nights are drawn within each site x
+species with at least two nights (the split of the 2.x scripts of the
+FrogNet project). The same night can then be in the training set for
+one species and in the test set for another, which breaks the
+independence of the test set; it is kept only to reproduce earlier
+training sets, and warns.
+\item \code{"none"}: every clip goes to the training set.
+}
+
+With \code{val_prop}, a validation set is drawn after the test set and after
+\code{max_per_site_species}, among the nights left in the training set: in
+each site, \code{ceiling(n * val_prop)} of its \code{n} training nights, never
+from \code{exclude_from_test}. Its clips go to \verb{val/}. BirdNET-Analyzer draws
+its own validation set by file, which leaks nights, and its autotune
+chooses the hyperparameters on it; pass \verb{val/} as \code{--test_data} so that
+the validation is by night, and keep \verb{test/} for the final evaluation.
+The result is the same as a second call of \code{build_training_set()} with
+\code{split = "night"}, \code{test_prop = val_prop} and \code{seed = val_seed} on the
+training rows of the first.
+
+The draws use \code{seed} (\code{seed + 1} for \code{max_per_site_species}, and
+\code{val_seed} for the validation set) and leave the global random number
+generator as it was. They follow the
+order of the rows of \code{validation}: the same clips in another order give
+another split.
+}
+
+\section{Negatives}{
+
+BirdNET-Analyzer (version 2.4.0 and its main branch of October 2026)
+gives the label -1 to the clips of \verb{-<species_code>} folders. That label
+enters the loss functions unchanged, which makes the loss of those clips
+negative and unbounded; \code{keras.metrics.AUC} does not count -1 as a
+negative, which inflates the validation AUPRC whenever the validation
+set holds such clips; and the internal random split puts all of them in
+the training set. Clips of the non-event folders (\code{"Noise"}, \code{"Other"},
+\code{"Background"}, \code{"Silence"}, in any case) get the label 0 and do not
+have these problems (reported in
+\url{https://github.com/birdnet-team/BirdNET-Analyzer/issues/1033}). Until
+it is fixed, use \code{negatives_folder = "Noise"}: every negative goes to
+that folder, as \verb{<species>-<site>-<clip_file>} (the short species code
+after the last \verb{_} of \code{species_code}), so that the file keeps its origin
+and clips of different species do not collide. The negatives then train
+the classifier against all classes, not only their own.
+}
+
+\section{Checks}{
+
+At the end, the counts are reported, and kept in the attribute
+\code{"checks"} of the result: test nights (site x night) that also have
+training clips, test nights listed in \code{exclude_from_test}, and test
+clips that overlap a training clip of the same species in the same
+recording; with \code{val_prop}, also validation nights with training clips
+and validation nights listed in \code{exclude_from_test}. All should be 0
+with \code{split = "night"}. With \code{strict = TRUE}, any count above 0 is an
+error.
+}
+
+\seealso{
+\code{\link[=training_nights]{training_nights()}}, \code{\link[=exclude_training_clips]{exclude_training_clips()}},
+\code{vignette("retraining")}.
 }

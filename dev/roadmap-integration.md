@@ -60,8 +60,51 @@ proporcional por sítio. É o equivalente ao `sampling_mode =
 "random_recordings"` do sheepdog e identifica as distribuições de scores dos
 verdadeiros e dos falsos positivos sem depender do classificador.
 
-## Estado (27/10/2026)
+## Estado (02/11/2026)
 
+- 02/11/2026: **sheepdog 3.3.3 reenviado ao CRAN.** Na revisão da 3.3.2,
+  o Uwe Ligges pediu duas mudanças: tirar o `stan-dev.r-universe.dev` de
+  `Additional_repositories`, que o sheepdog não usa, e citar o método na
+  Description no formato `Autores (ano) <doi:...>`. A 3.3.3 (sheepdog#76,
+  tag `v3.3.3` no commit `2152d07`) faz as duas coisas e cita Miller et
+  al. (2011), Chambert et al. (2015) e Wood & Kahl (2024). O código é o
+  mesmo da 3.3.2. O `--as-cran` local deu só as NOTEs de submissão nova e
+  do HTML Tidy. O crywolf 2.1.0 continua na fila da revisão manual.
+- 01/11/2026: **sheepdog e crywolf enviados ao CRAN.** O crywolf 2.1.0
+  passou no pré-teste (1 NOTE: submissão nova, cmdstanr e sheepdog nos
+  `Additional_repositories`) e espera a revisão manual. O sheepdog foi
+  enviado como 3.3.2 (tag `v3.3.2`), igual à 3.3.0 (fases 0 e 1, app local,
+  retreino por noite) com duas correções: a vinheta `crywolf-integration`
+  cita o artigo do JAV sem o DOI, que vai demorar (o artigo está em
+  espera na revista), na 3.3.1 (sheepdog#71); e o `occasion_draws()` lê o
+  parquet sem `mmap`, que travava o arquivo no Windows e derrubava um
+  teste no win-builder, na 3.3.2 (sheepdog#72). A 3.3.0 e a 3.3.1 nunca
+  foram enviadas. Win-builder (R-devel) e `--as-cran` local, com e sem o
+  crywolf: só a NOTE de submissão nova. O DOI do JAV volta numa versão
+  seguinte, quando resolver.
+- 01/11/2026: **fase 1 completa.** As duas análises "dev" rodaram no
+  Curiango com *M* = 50 (100 ajustes convergidos). Regra de *M*: o erro de
+  Monte Carlo da média é sqrt(share_between / *M*) do DP posterior, então
+  *M* = 100 × maior share_between (de um piloto com *M* = 20) o mantém
+  abaixo de 10%. Ocupação: *M* = 20 com o BirdNET, ~76 com o classificador
+  próprio. Fig. 4: com o BirdNET o caminho MC repete o MaxF1; com o
+  próprio, o efeito da temperatura cai para −0,06 (−0,24 a 0,11), e a
+  incerteza da calibração domina (share_between 0,49–0,97). A hipótese de
+  que os classificadores convergem sem limiar não se confirmou para a
+  temperatura; a comparação é aproximada (sem efeito aleatório do gravador
+  na detecção). Detalhes em `dev/benchmarks/README.md`.
+- 01/11/2026: **causa da queda da temperatura: a calibração.** O efeito
+  aleatório do gravador não muda nada (−0,035 contra −0,028). Nos minutos
+  revisados do classificador próprio, P(TP | score) cai em noites quentes
+  (−0,37 por DP, p = 0,03); a calibração sem temperatura infla as
+  detecções dessas noites. Com a temperatura na calibração (esquema 1.3) e
+  *M* = 20, o efeito volta a −0,40 (−1,05 a −0,12), entre MaxF1 e
+  MaxPrecision. Recomendação: a calibração deve incluir as covariáveis de
+  ocupação que mudam a prevalência. É o argumento empírico para a fase 2,
+  que estima as duas coisas juntas. Com *M* = 90 (90 ajustes convergidos,
+  erro de Monte Carlo de 9,8% do DP posterior), a temperatura fica em
+  −0,40 (−0,78 a −0,09): a mesma média de *M* = 20, com o intervalo
+  estável.
 - Fase 0 feita: `export_occupancy_data()` (sheepdog#36) e `fp_read_sheepdog()`
   (crywolf 1.9.0, doi:10.5281/zenodo.23624712).
 - Fase 1 feita do lado do sheepdog: os sete itens da integração (abaixo)
@@ -76,8 +119,48 @@ verdadeiros e dos falsos positivos sem depender do classificador.
   crywolf) e `test-read_sheepdog.R` no crywolf, sobre a mesma fixture
   `export-1.2`; `dev/check-sheepdog-fixture.R` do crywolf confere que a
   cópia dele continua idêntica à do sheepdog.
-- Próximo passo: o `fp_occu_dyn()` no crywolf; a fase 2 vem depois dele
-  (ver Prioridades). No sheepdog, nada bloqueia: só pendências pequenas.
+- Próximo passo (02/11/2026): o **multiespécies** (fase 5, a Fase A do
+  roadmap do crywolf, `fp_occu_ms()`), que passa à frente da fase 2 (ver
+  Prioridades). Do lado do sheepdog, a primeira tarefa é a fixture do
+  contrato com várias espécies (ver Fase 5). Pendente no crywolf: merge do
+  passo 8 (crywolf#14) e o release com o dinâmico e o leitor do esquema
+  1.3.
+- 01/11/2026, **`fp_occu_dyn()` no crywolf (2.1.0.9000, experimental):**
+  passos 1 a 7 de 8 com merge (crywolf#8 a #11 e #13): temporada no
+  `fp_data(season = )`, forward em Stan com as emissões do `fp_occu()`
+  (log-densidade igual com uma temporada, ~3e-14), fórmulas `psi1`, `col`
+  e `ext` com covariáveis de temporada (`season_covs`), e estados latentes
+  por FFBS (`fp_sites()` por sítio-temporada, `fp_ppc()`, `simulate()`,
+  `simulate_fp_dyn()`). Temporadas que são datas (`night`,
+  `recording_date` do export) são preenchidas pelo `fp_data()`, então
+  cada transição vale uma noite; o esquema do sheepdog não muda.
+  Quantidades derivadas por temporada (ocupação esperada e realizada,
+  rotatividade, equilíbrio) no `summary()` (crywolf#11). Passos 6 e 7 na
+  AWS (crywolf#13; 4.450 tarefas, 6.700 ajustes, sem falhas; sem o
+  `fp_calibrate()`, como combinado): com `fp = ~ 1`, colonização,
+  extinção e `psi1` ficam com viés < 0,02 e cobertura de 0,88–1,00 em
+  todas as 45 células de identificação, inclusive sem verificação; a
+  verificação estreita os intervalos (`p10_bar` 20–25% mais estreito com
+  40% verificado). Ignorar os falsos positivos superestima a colonização
+  (+0,06 a +0,28 com p10 de 0,02 a 0,10). Recuperação com covariáveis:
+  cobertura de 0,92–0,98. SBC: ranks uniformes em 8 de 10 parâmetros;
+  `ext_(Intercept)` (p = 0,003) com posterior um pouco conservadora e
+  `fp_(Intercept)` (p = 0,048). O desenho não testou p11 baixo. O crywolf de desenvolvimento
+  também lê os exports 1.3 (calibração com covariável contínua); nada
+  disso tem release ainda (a 2.1.0 enviada ao CRAN não tem).
+- 02/11/2026, **passo 8 do `fp_occu_dyn()` feito** (crywolf#14, CI
+  verde, ainda sem merge). O LOO não serve aqui, porque o `log_lik` do
+  dinâmico é por sítio e o Curiango tem 7 sítios. A comparação foi por
+  validação cruzada em blocos de 7 noites (10 dobras, as mesmas em todos
+  os sítios): o dinâmico (`col`/`ext ~ temp_d + rh_d`) contra
+  sítio-noites independentes (`occ ~ temp_d + rh_d`), os dois com
+  `det ~ bio + aci`, `fp ~ temp + rh` e `random_recorder`. Resultado: elpd
+  dinâmico − independente = +191,5 (EP 29,0); o dinâmico ganha nas 10
+  dobras e nos 7 sítios. O EP trata as 69 unidades sítio × dobra como
+  independentes e provavelmente sai um pouco pequeno. Um ajuste
+  independente (dobra 8) ficou preso numa moda (R-hat 1,54) e foi refeito
+  com outra semente, sem mudar o elpd. Com isso o `fp_occu_dyn()` cumpriu
+  os oito passos, e o Diogo decidiu seguir para o multiespécies.
 - Modo sazonal refeito em 27/10/2026 (`curiango-export.R` com `"season"`,
   e o fluxo com `OUT` numa pasta separada). A regra de 1 erro-padrão escolhe
   o modelo só com mês, que tira o desajuste mensal mas deixa 5 de 7
@@ -99,10 +182,10 @@ verdadeiros e dos falsos positivos sem depender do classificador.
 |---|---|---|---|---|
 | 1 | 0. Contrato de dados | os dois | P–M | — |
 | 2 | 1. Propagação Monte Carlo da calibração | os dois | P | fase 0 |
-| 3 | 2. Modelo conjunto score–ocupação | crywolf | G | fase 0; depois do `fp_occu_dyn()` (decidido em 27/10/2026) |
-| 4 | 3. Validação em duas camadas | sheepdog (+ crywolf) | M | fase 2 |
-| 5 | 4. Atividade vocal (densidade de chamadas) | crywolf | M–G | fase 2 |
-| 6 | 5. Comunidade | crywolf | G | roadmap do crywolf (MSO, Fase A) |
+| 3 | 5. Comunidade | crywolf (+ sheepdog: fixture e verificação por espécie) | G | fase 0; `fp_occu_dyn()` pronto (decidido em 02/11/2026) |
+| 4 | 2. Modelo conjunto score–ocupação | crywolf | G | fase 0; depois do multiespécies |
+| 5 | 3. Validação em duas camadas | sheepdog (+ crywolf) | M | fase 2 |
+| 6 | 4. Atividade vocal (densidade de chamadas) | crywolf | M–G | fase 2 |
 | — | App local (Shiny) | sheepdog | M | nada; em paralelo |
 
 Em paralelo a tudo: o benchmark (seção própria), que decide se cada fase
@@ -119,8 +202,19 @@ covariáveis, identificação junto com ψ e θ). Até lá, `fp ~ temp + rh` é 
 paliativo do lado do crywolf. Nenhum item do sheepdog depende da fase 2,
 só a fase 3.
 
+Decidido pelo Diogo em 02/11/2026, com o `fp_occu_dyn()` pronto (oito
+passos): o multiespécies (fase 5, Fase A do crywolf) vem **antes** da
+fase 2. Ele segue o plano do crywolf, que já tem critérios de pronto
+(log-densidade igual à do `fp_occu()` com uma espécie; recuperação com 5,
+20 e 50 espécies), e usa as detecções binárias com o falso positivo por
+espécie, sem depender dos scores. A fase 2 continua sendo pesquisa e entra
+depois; os scores por espécie chegam ao multiespécies só então.
+
 No sheepdog, a 3.2.1 vai para o CRAN como está; as fases 0, 1 e 3 entram
-como funções novas numa 3.3.0 (sem quebra).
+como funções novas numa 3.3.0 (sem quebra). Atualizado em 01/11/2026: a
+3.2.1 nunca foi enviada; a 3.3.0 (fases 0 e 1) foi lançada e foi ao
+CRAN como 3.3.2 (vinheta sem o DOI do JAV e uma correção para o
+Windows); a fase 3 entra numa versão seguinte.
 
 ## Fase 0: contrato de dados
 
@@ -151,9 +245,13 @@ pacote importa o outro.
 
 Decisões embutidas, a conferir:
 
-- **`max_score` por ocasião** é a estatística suficiente mínima para os
-  modelos de Rhinehart et al. (2022) e de Ogawa et al. (2025) no nível da
-  ocasião. Guardar as janelas (`detections.csv`) deixa aberta a fase 4.
+- **`max_score` por ocasião** é o que Ogawa et al. (2025) usam (o maior
+  score da hora). Não é estatística suficiente para Rhinehart et al.
+  (2022), que usam o score de cada arquivo (corrigido em 02/11/2026): o
+  máximo de *n* janelas tem distribuição própria, que depende de
+  `n_windows` (ver "Distribuição do máximo" na fase 2). Por isso
+  `n_windows` está em `scores.csv`. Guardar as janelas (`detections.csv`)
+  deixa aberta a fase 4 e o modelo por janela.
 - **Veredito de clipe ≠ estado da ocasião.** Um positivo prova que houve
   canto na ocasião; um negativo no clipe de maior score não prova ausência
   (pode haver canto com score menor). O contrato separa `validation.csv`
@@ -187,8 +285,8 @@ ecológico, o que por si só responde a uma pergunta do artigo do Curiango.
 |---|---|---|
 | `calibration_draws.csv` no contrato | sheepdog | escrito por `export_occupancy_data(fit = )` |
 | `fp_occu_mc(data_list, ...)`: ajusta em paralelo e empilha os draws (mistura igual das posteriores) | crywolf | com *M* = 1 e calibração degenerada, igual ao `fp_occu()`; `summary()` separa a variância entre e dentro dos ajustes |
-| Escolha de *M*: medir a estabilidade dos coeficientes de ocupação com *M* = 10, 20, 50 | dev | regra prática documentada |
-| Curiango: comparar com os quatro caminhos do artigo | dev | figura no estilo da Fig. 4 do artigo, com o caminho MC |
+| Escolha de *M*: medir a estabilidade dos coeficientes de ocupação com *M* = 10, 20, 50 | dev | feito (01/11/2026): *M* = 100 × maior share_between |
+| Curiango: comparar com os quatro caminhos do artigo | dev | feito (01/11/2026): `curiango-fig4-mc.R` |
 
 Risco: custo *M* vezes o de um ajuste. O caminho rápido (GLM por sítio) do
 crywolf ajuda; medir antes de documentar.
@@ -220,51 +318,136 @@ de divergência que produziu o erro de visitas do artigo do JAV).
 
 - O esquema 1.x basta; se faltar algo, entra como acréscimo 1.x (por
   exemplo, o score do clipe revisado quando difere do da ocasião).
-  `scores.csv` dá s_ij (`max_score`, censura em `min_confidence`),
-  `detections.csv` as predições por janela, `validation.csv` o score de cada
-  clipe, `recordings_verified.csv` o w_ij observado e `occasion_covariates`
-  as covariáveis U_ij.
+  `scores.csv` dá s_ik (`max_score`, censura em `min_confidence`) e n_ik
+  (`n_windows`), `detections.csv` as predições por janela, `validation.csv`
+  o score de cada clipe, `recordings_verified.csv` o w_ik observado e
+  `occasion_covariates` as covariáveis **d**_ik e **g**_ik.
 - Dados e desenho da validação ficam no sheepdog; f₁/f₀ e o ajuste, só no
   crywolf.
 - O período primário do dinâmico é argumento do `fp_occu_dyn()` (a partir de
   `night` ou `recording_date`), não coluna do esquema.
 - A hipótese de que a calibração P(TP | score, sítio) mistura a prevalência
-  de canto com o erro do classificador ainda não foi testada: é a primeira
-  coisa que a simulação da fase 2 deve conferir.
+  de canto com o erro do classificador tem agora evidência empírica
+  (01/11/2026, sheepdog#67): no Curiango, P(TP | score) do classificador
+  próprio cai em noites quentes, e a calibração sem temperatura apaga o
+  efeito da temperatura na ocupação pelo caminho MC. Continua sendo a
+  primeira coisa que a simulação da fase 2 deve conferir, agora com um
+  caso real para reproduzir.
 
 ### O modelo (proposta, a validar)
 
-Sítio (ou sítio-noite) *i*, ocasião *j*:
+Notação da vinheta do crywolf (`vignettes/crywolf.Rmd`): sítio (ou
+sítio-noite) *i*, ocasião *k*. A DAG está em `dev/dag/fase2_dag.png`
+(fonte `fase2_dag.dot`, no estilo da DAG do crywolf; `Rscript
+dev/dag/make_fase2_dag.R` refaz a figura).
 
-- **Estado:** z_i ~ Bernoulli(ψ_i), logit(ψ_i) = X_i β (como no
+![DAG do modelo da fase 2](dag/fase2_dag.png)
+
+- **Estado:** z_i ~ Bernoulli(ψ_i), logit(ψ_i) = **x**_i' **β** (como no
   `fp_occu()`).
-- **Canto na ocasião:** w_ij | z_i ~ Bernoulli(z_i · θ_ij), logit(θ_ij) =
-  V_ij α, com o termo de Markov e o efeito de gravador do crywolf. θ faz o
-  papel de p11.
-- **Score:** s_ij = logit(`max_score`), com censura em `min_confidence`.
-  - s_ij | w_ij = 1 ~ f₁(μ₁ + U_ij γ₁, σ₁);
-  - s_ij | w_ij = 0 ~ f₀(μ₀ + U_ij γ₀, σ₀), com uma massa de censura (sem
-    detecção);
-  - restrição de identificação μ₁ > μ₀ (o "gap", como no `fp_gap_prior()`).
-- **Verificações:** uma ocasião de `recordings_verified` observa w_ij;
-  um clipe positivo em `validation` implica w_ij = 1; um clipe negativo
-  informa só a componente f₀ daquele score, não w_ij.
+- **Canto na ocasião:** w_ik | z_i ~ Bernoulli(z_i θ_ik), logit(θ_ik) =
+  **d**_ik' **α** + α_w w_i,k−1 + u_r[i]. θ faz o papel de p11. O termo de
+  Markov é o do crywolf, mas sobre o canto latente da ocasião anterior, e
+  não sobre a detecção observada (`y_prev`); por isso a verossimilhança
+  precisa do forward de dois estados dentro da noite.
+- **Score:** s_ik = logit(`max_score`), censurado abaixo de
+  c = logit(`min_confidence`). No nível da janela:
+  - sem canto: N(μ_0,ik, σ_0), μ_0,ik = λ_0 + **g**_ik' **γ**_0;
+  - com canto: N(μ_1,ik, σ_1), μ_1,ik = λ_0 + Δ_s + **g**_ik' **γ**_1;
+  - Δ_s > 0 é o gap dos scores, como o Δ do `fp_occu()`: mantém
+    μ_1 > μ_0 nos valores de referência das covariáveis.
+  - Como s_ik é o máximo de n_ik janelas, a densidade de s_ik dado w_ik
+    não é a normal da janela (ver "Distribuição do máximo").
+- **Verificações:** uma ocasião de `recordings_verified` observa w_ik; um
+  clipe positivo em `validation` implica w_ik = 1; um clipe negativo informa
+  só a componente sem canto daquele score (N(μ_0,ik, σ_0)), não w_ik.
 
-Este modelo junta o modelo de mistura contínua de Rhinehart et al. (2022) e
-o de classificação–ocupação de Ogawa et al. (2025) com o desenho de
-verificação de Miller et al. (2011) e de Chambert et al. (2015). O que muda
-em relação a eles, e é o que o Curiango pede:
+**De onde vem cada parte** (corrigido em 02/11/2026, depois da leitura do
+texto completo e do material suplementar de Rhinehart et al. 2022 e do
+texto completo de Ogawa et al. 2025; tabela em `dev/dag/comparacao_modelos.md`):
 
-1. **Covariáveis nas distribuições dos scores** (U_ij: BIO, ACI, gravador,
-   sítio). O erro do classificador varia no espaço (Metcalf et al. 2022), e
-   o artigo do Curiango sugere que os scores altos variam com o ambiente.
-2. **Dependência dentro da noite** pelo termo de Markov do crywolf, que
-   nenhum dos dois modelos citados tem.
-3. **Verificação com desenho conhecido** vinda do contrato.
+- a estrutura z → w → s é a de Rhinehart et al. (2022): no modelo deles,
+  f_ik ~ Bernoulli(z_i θ) indica se a espécie está no arquivo, θ é a taxa de
+  canto e os scores são N(μ_0, σ_0) ou N(μ_1, σ_1), com σ_0 ≠ σ_1. As
+  anotações por arquivo (h = 0, 1, 2) correspondem às nossas verificações
+  de clipe. No material suplementar, θ e ψ recebem covariáveis (hora do dia
+  por arquivo; área basal por sítio);
+- de Ogawa et al. (2025) vem o uso de um score por ocasião (o maior da
+  hora). O w_ij deles **não** é canto: é o status de falso positivo de uma
+  detecção, w ~ Bernoulli(q), e o modelo não usa dados verificados;
+- de Miller et al. (2011) e Chambert et al. (2015) vem o desenho de
+  verificação.
 
-**f₁ e f₀.** Normais no logit, como em Rhinehart et al. (2022), são o ponto
+O que muda em relação a esses modelos, e é o que o Curiango pede:
+
+1. **Covariáveis nas distribuições dos scores** (**g**_ik: BIO, ACI,
+   gravador, sítio). Nos dois modelos μ e σ são constantes. O erro do
+   classificador varia no espaço (Metcalf et al. 2022), e o artigo do
+   Curiango sugere que os scores altos variam com o ambiente.
+2. **Dependência dentro da noite** pelo termo de Markov. Rhinehart et al.
+   assumem arquivos independentes e dizem que o estudo empírico não corrige
+   a autocorrelação; Ogawa et al. não tratam disso.
+3. **Verificação com desenho conhecido** vinda do contrato, com seleção
+   pelo score possivelmente ignorável. Rhinehart et al. anotam um
+   subconjunto aleatório e sugerem, como extensão futura, dirigir a escuta
+   para os arquivos de score alto (p. 1787); a simulação de ignorabilidade
+   responde a isso.
+4. **Score por ocasião com a distribuição do máximo**, em vez de assumir
+   que o máximo segue a normal da janela (o que Ogawa et al. fazem
+   implicitamente).
+
+**f₀ e f₁.** Normais no logit, como em Rhinehart et al. (2022), são o ponto
 de partida. **[decidir]** Testar uma alternativa mais flexível (t de
-Student ou skew-normal) se o PPC dos scores falhar no Curiango.
+Student ou skew-normal) se o PPC dos scores falhar no Curiango. Os dois
+artigos pedem isso: componente positiva bimodal no chapim de Rhinehart et
+al. (um tipo de canto ausente do treino) e scores concentrados perto de 1
+em Ogawa et al.
+
+### Distribuição do máximo
+
+Acrescentado em 02/11/2026; inferência minha, a conferir na simulação.
+Com n_ik janelas independentes:
+
+- sem canto (w_ik = 0), todas as janelas vêm de f₀ e
+  P(s_ik ≤ s) = Φ((s − μ_0)/σ_0)^n_ik, que sobe com n_ik;
+- com canto (w_ik = 1), o máximo mistura janelas com e sem canto, e a
+  distribuição depende de quantas janelas têm canto, que o modelo da
+  ocasião não tem.
+
+Se f₀ e f₁ forem tratadas como a distribuição do próprio máximo, com
+parâmetros fixos, ocasiões com mais janelas parecem ter mais canto. Opções,
+**[decidir]**:
+
+1. f₀ do máximo exata (Φⁿ) e f₁ como a distribuição do máximo dado ao
+   menos uma janela com canto, com um parâmetro para a fração de janelas
+   com canto (aproxima a fase 4);
+2. f₀ e f₁ empíricas no máximo, com n_ik como covariável em **g**_ik;
+3. ir direto ao modelo por janela com `detections.csv` (fase 4), o
+   caminho de Rhinehart et al.
+
+A janela de independência também precisa ser conferida: janelas de 3 s
+sobrepostas não são independentes.
+
+### Identificação: o que Rhinehart et al. (2022) mostram
+
+Do texto principal e do material suplementar:
+
+- ~5% das simulações falharam com μ_0 ≈ μ_1 (diagnóstico:
+  ∣μ_1 − μ_0∣ < 0,1); 94% dessas falhas tinham ψ̂ entre 0,9 e 1;
+- mais falhas com θ baixo e poucas anotações positivas; bem menos com 72
+  anotações por sítio (10% dos arquivos);
+- a maioria das falhas veio do melhor classificador, atribuída ao valor
+  inicial μ_1 = 1, longe do verdadeiro (6); trocar os iniciais de
+  (0,5; 0,5) para (0; 1) reduziu as falhas à metade;
+- μ_1 > μ_0 é só assumido: as priors são independentes. No estudo de
+  covariáveis, 8% das cadeias não convergiram (R̂ ≥ 2), quase todas com o
+  melhor classificador e sem anotação.
+
+Consequências para o `fp_occu_score()`: impor a ordenação na
+parametrização (μ_1 = μ_0 + Δ_s, Δ_s > 0, como o gap do `fp_occu()`);
+tirar os valores iniciais da calibração do sheepdog; e simular o caso de θ
+baixo com poucas verificações positivas, que é o da espécie rara (ver
+`dev/verification-by-species/`).
 
 ### Relação com a calibração do sheepdog
 
@@ -301,12 +484,13 @@ Também é inferência minha; precisa de simulação (abaixo).
 
 | Passo | Pronto quando |
 |---|---|
-| `simulate_fp()` com scores: gerar s_ij de f₁/f₀ com covariáveis | os scores simulados reproduzem as curvas de precisão e recall da Fig. 3 do Curiango com parâmetros escolhidos à mão |
+| `simulate_fp()` com scores: gerar os scores por janela de f₀/f₁ com covariáveis e tomar o máximo por ocasião | os scores simulados reproduzem as curvas de precisão e recall da Fig. 3 do Curiango com parâmetros escolhidos à mão |
+| Distribuição do máximo: comparar as opções 1–3 com n_ik variando entre ocasiões | escolha documentada; viés em ψ e θ quando n_ik é ignorado |
 | Stan: verossimilhança por sítio marginalizando z e w (dois níveis de soma; com Markov, forward de dois estados dentro da noite) | log-densidade em R = Stan; com σ → 0 e limiar fixo, reduz-se ao modelo de Miller (conferir numericamente) |
 | `fp_occu_score()`: função nova; fórmulas `occ`, `det`, `score1`, `score0`; métodos `summary`, `predict`, `loo`, `fp_ppc` (incluindo o PPC dos scores) | testes de recuperação e SBC uniforme, como no `fp_occu()` |
 | Simulação da ignorabilidade: validação aleatória × por score × "top", com f bem e mal especificada | tabela de viés e cobertura; vira uma vinheta |
 | Curiango, os dois classificadores, sem limiar | comparado por LOO e pela Fig. 4 do artigo; a hipótese é que os dois classificadores convirjam mais entre si do que nos caminhos com limiar |
-| Comparação com Rhinehart et al. (2022) e Ogawa et al. (2025) nos dados simulados | código deles reproduzido ou reimplementado; diferença documentada |
+| Comparação com Rhinehart et al. (2022) e Ogawa et al. (2025) nos dados simulados | código deles reproduzido ou reimplementado (Rhinehart: NIMBLE, `models.R` no Dryad, 10.5061/dryad.ns1rn8ptd; Ogawa: JAGS, Zenodo, 10.5281/zenodo.12802535); diferença documentada. A prior de μ_1 de Rhinehart et al. é N(1, 10⁴) no texto principal e N(0, 10000) no material suplementar |
 
 **Critério de sucesso** (decide se a fase vale um artigo): no Curiango, a
 diferença entre os dois classificadores nos coeficientes de ocupação fica
@@ -357,15 +541,91 @@ com canto dada a ocupação, com covariáveis (lua, temperatura). Precisa de
 É aqui que se testa a hipótese da lua do Curiango (efeito na intensidade,
 não na ocupação). Também é o caso natural dos anuros em coro do FrogNet.
 
-**[decidir]** Se a fase 4 vem antes ou depois da comunidade.
+Vem depois da comunidade: depende da fase 2, que ficou para depois do
+multiespécies (decidido em 02/11/2026).
 
 ## Fase 5: comunidade
 
 Segue a Fase A do roadmap do crywolf (`fp_occu_ms()`, falso positivo por
-espécie, independente entre espécies), agora com scores por espécie. As
+espécie, independente entre espécies), primeiro com as detecções binárias
+e, depois da fase 2, com scores por espécie. As
 `community_matrices_draws()` do sheepdog passam a ser a linha de base para
 comparar: matrizes de comunidade com e sem modelo de observação, numa
 análise de metacomunidade.
+
+O esquema do export já é multiespécies: `scores.csv`, `verification.csv`
+e as chaves da calibração têm `species`, e `schema.json` lista as espécies.
+Mas nenhum dos dois lados testa isso hoje: as fixtures `export-1.1` a
+`export-1.3` têm uma espécie só (*Physalaemus cuvieri*), e o
+`fp_draws_data()` do crywolf para quando o export tem mais de uma espécie
+(exige `fp_read_sheepdog(species = )`). Passos (02/11/2026):
+
+| Passo | Pacote | Pronto quando |
+|---|---|---|
+| Fixture `export-1.3-ms`: três espécies, uma delas rara (poucas detecções e poucos clipes verificados), com calibração por espécie (feita em 02/11/2026, sheepdog#74) | sheepdog | `test-contract.R` confere as chaves por espécie; a cópia no crywolf é idêntica (`dev/check-sheepdog-fixture.R`) |
+| Leitura de todas as espécies: `fp_read_sheepdog(species = NULL)` → `fp_data()` em formato longo (passo "Dados" da Fase A) | crywolf | `print()` e os avisos de desenho por espécie sobre a fixture |
+| Verificação por espécie: conferir quantos clipes verificados cada espécie recebe com `target_total` (divisão igual entre espécies) e com `random_recordings` (cada gravação revisada para todas as espécies); avisar quando uma espécie fica abaixo de um mínimo | sheepdog | simulação com uma espécie rara; aviso no `select_clips()` ou no `export_occupancy_data()` (feito em 02/11/2026: `min_verified` no export e `dev/verification-by-species/`, sheepdog#75) |
+| Export multiespécies do FrogNet (DiverSons), fora dos repositórios dos pacotes (em `frognetUFMS/analysis`), como caso real do `fp_occu_ms()` | os dois | export lido pelo crywolf; ajuste com as 16 espécies; resultados pré-computados na vinheta depois do depósito dos dados (export feito em 02/11/2026; a verificação é refeita, ver abaixo) |
+
+O risco apontado no crywolf (verificação rara demais nas espécies raras) é
+o que o terceiro passo mede do lado do desenho. Resultado
+(`dev/verification-by-species/README.md`): com uma espécie de 15
+detecções num só sítio, o `top` não passa de 15 clipes verificados com
+qualquer `target_total`, o `random_detections` com limiar 0,5 fica com 1
+e o `random_recordings` dá ~0 positivos com qualquer fração. Nenhum
+desenho resolve sozinho: a taxa de falso positivo da espécie rara vem da
+comunidade ou da priori, e o `export_occupancy_data()` agora nomeia essas
+espécies num aviso (`min_verified = 10`, ou nenhum positivo ou nenhum
+negativo).
+
+**Dados reais (decidido em 02/11/2026): o FrogNet.** O Curiango é uma
+espécie só. O VicFrogNET (Zenodo 10.5281/zenodo.17773400, CC BY 4.0) foi
+examinado: tem score e veredito por detecção para 14 espécies de anuros em
+14 sítios, mas não publica a lista de gravações (sem ela não há
+não-detecções), e as 600 amostras aleatórias do depósito dão recall de
+cerca de 15%, sem espécie na anotação. O FrogNet (DiverSons, 7 sítios,
+2021–2025) tem o que falta:
+
+- as tabelas de predição completas do modv1 (31 classes, confiança
+  ≥ 0,05; só em ARA, 366 mil predições em 56 mil arquivos);
+- 6.304 clipes revisados (3.139 positivos, 3.165 negativos) em cerca de
+  2.800 sítio-noites, com positivos de 16 espécies, das comuns nos 7
+  sítios (*den_nan*, *phy_alb*, *boa_ran*) às restritas (*den_min* e
+  *sci_fuv* só em MIM e UEM; *tra_typ* com poucos positivos);
+- as noites gravadas por sítio e mês, e uma calibração com a estrutura
+  do m4 (`tp ~ logit_conf + (logit_conf | especie) + (1 | local:especie)`).
+
+Os dados continuam privados e não entram nos pacotes: o desenvolvimento
+usa o export localmente, e a vinheta só traz resultados pré-computados
+depois do depósito dos dados no Zenodo junto com o artigo da RSEC. Pontos
+a resolver no export:
+
+- a lista de gravações: pela listagem dos `.flac` no NAS (os caminhos das
+  tabelas de predição são só uma aproximação);
+- a verificação é do modo `"top"`: as ocasiões foram sorteadas sem
+  depender do score, mas o clipe revisado é o de maior score da ocasião,
+  e as probabilidades de inclusão não foram registradas. Um positivo
+  confirma a ocasião; um negativo não prova que a espécie não cantou.
+  O crywolf descarta esses clipes por padrão (`keep_top = FALSE`), e com
+  `keep_top = TRUE` a taxa de falso positivo sai subestimada. **Decidido
+  em 02/11/2026: nova rodada de verificação aleatória**
+  (`random_detections`, `frognetUFMS/analysis/sortear_rodada_aleatoria.R`,
+  manifesto no Box):
+  - limiar de 0,5 no score, o mesmo da detecção no modelo de ocupação;
+  - ocasião = gravação de 1 min, entre 16 h e 6 h;
+  - estrato sítio × espécie × mês, até 10 ocasiões por sítio × espécie,
+    com `balance_by_hour = FALSE` (`inclusion_prob` exata) e seed 2026;
+  - 1.033 ocasiões e 3.023 clipes, de 59 (*sci_fuv*) a 381 (*phy_alb*)
+    por espécie;
+  - revisão às cegas: o nome do clipe não leva o score, e a chave fica num
+    arquivo separado.
+
+  Só ~3% desses clipes já estavam na revisão antiga. Falta cortar os
+  clipes com o `cut_clips()`, que precisa dos `.flac` do NAS, e revisar;
+- com 7 sítios, a unidade da ocupação deve ser sítio × mês ou sítio ×
+  noite (como no Curiango), ou o multiespécies dinâmico mais adiante;
+- o modv1 foi treinado com gravações dos mesmos sítios, então a
+  calibração precisa ser por sítio × espécie.
 
 A confusão entre espécies (A marcada quando quem canta é B) continua **fora
 do plano**, como decidido no roadmap do crywolf. A literatura sobre ela
@@ -388,24 +648,33 @@ O app é uma camada fina sobre as funções que já existem: nenhuma lógica
 nova entra nele, e o que ele grava é o mesmo que as funções gravam (o CSV
 de veredictos, o export). `shiny` entra em Suggests.
 
-1. **Revisão** (o maior ganho e o maior trabalho). Espectrograma e player
+1. **Revisão** (o maior ganho e o maior trabalho). **Feito em
+   01/11/2026:** `run_app()` e `app_verdicts()`, com o artigo
+   "Reviewing clips in the sheepdog app" (a vinheta usa o app do pacote,
+   decidido pelo Diogo). Espectrograma e player
    HTML5 de cada clipe, com botões positivo/negativo/incerto que gravam o
    CSV de veredictos que `read_validations()` lê, no lugar de separar os
    clipes em pastas. Fila por revisor a partir de `assign_reviewers()`;
    `reviewer_agreement()` e `consensus_verdicts()` continuam iguais.
-2. **Sorteio e exportação.** Formulário para o desenho de `select_clips()`
-   (`top`, `random_detections`, `random_recordings`), estrato e número de
-   clipes, mostrando a probabilidade de inclusão; botão que chama
-   `export_occupancy_data()`.
+2. **Sorteio e exportação. Feito em 01/11/2026:** abas Sampling e Export
+   do `run_app()`, abertas com `selection_dir` e `output_dir`. Sampling:
+   formulário para o desenho de `select_clips()` (modo, estrato, `n_top`,
+   `target_total`/`max_per_species`, filtros de sítio, espécie e hora,
+   seed), prévia das contagens por sítio x espécie e da probabilidade de
+   inclusão, aviso de que `top` não estima falsos positivos; o corte chama
+   `cut_clips()` e grava `clip_manifest.csv`, `extraction_info.csv` e
+   `clips/`, e os clipes novos entram direto na fila da revisão (que passou
+   a ser reativa). Export: chama `export_occupancy_data()` com os
+   veredictos do app (consenso entre revisores) e mostra o resumo do
+   `schema.json`. Sem calibração no export até o item 3.
 3. **Calibração.** Primeiro com lme4, ao vivo: comparação de modelos, curva
    de calibração e `calibration_ppc()` em gráficos. brms como opção para
    quem tem CmdStan, rodando em segundo plano com barra de progresso.
 
 Entregas: `run_app()` (ou um nome melhor), a vinheta e testes dos módulos
 com `shiny::testServer()`. Esforço: M, em três ou quatro PRs, na ordem
-acima; entra numa versão menor (sem quebra). **[decidir]** Se a vinheta
-monta o app passo a passo a partir das funções (o usuário adapta o código)
-ou só mostra como abrir e usar o app que vem no pacote.
+acima; entra numa versão menor (sem quebra). Decidido em 01/11/2026: a
+vinheta mostra como abrir e usar o app que vem no pacote.
 
 ## Benchmark e dados
 
@@ -413,7 +682,7 @@ ou só mostra como abrir e usar o app que vem no pacote.
 |---|---|---|
 | Simulações (`simulate_fp()` estendido) | recuperação, SBC, ignorabilidade, orçamento de validação | a fazer na fase 2 |
 | Curiango (Zenodo 10.5281/zenodo.21795898, CC BY 4.0) | um classificador local e um global, 1.199 arquivos anotados por completo, PPC com falhas conhecidas | já usado nos dois pacotes; falta exportar no esquema |
-| FrogNet (anuros, Pantanal e Cerrado) | multiespécies, coros, atividade vocal | **[decidir]** quais dados e quando |
+| FrogNet (anuros, Pantanal e Cerrado) | multiespécies, coros, atividade vocal | caso real do multiespécies (fase 5; ver lá); dados privados até o depósito com o artigo da RSEC |
 | Conjuntos públicos totalmente anotados (Havaí, Pacific Northwest, usados por Navine et al. e Freeland-Haynes et al.) | validação externa | **[decidir]** conferir licença e acesso |
 
 Contraponto obrigatório no benchmark: Katsis et al. (2025) acharam que,
@@ -429,6 +698,9 @@ direção (o classificador local deixou os caminhos mais parecidos).
 - **Identificação.** Com poucas verificações, f₁/f₀, θ e ψ competem pelas
   mesmas detecções. O gap ajuda; medir em simulação quanta verificação é
   necessária antes de documentar, como foi feito com o `random_fp`.
+  Rhinehart et al. (2022) já mostram o padrão de falha (μ_0 ≈ μ_1 com ψ̂
+  perto de 1, pior com θ baixo e poucas anotações positivas); ver
+  "Identificação" na fase 2.
 - **Custo.** Marginalizar w dentro da noite com Markov, em 1.700 noites
   × 56 ocasiões, é caro. Medir no Curiango cedo; o `reduce_sum` e as
   tuplas do crywolf 1.7 ajudam.
@@ -456,7 +728,9 @@ direção (o classificador local deixou os caminhos mais parecidos).
 ## Referências verificadas
 
 Conferidas no Crossref, no Undermind ou no Scholar Gateway em 24/10/2026.
-Os preprints foram lidos só pelo abstract.
+Os preprints foram lidos só pelo abstract. Rhinehart et al. (2022), com o
+material suplementar, e Ogawa et al. (2025) foram lidos no texto completo
+em 02/11/2026.
 
 - Chambert, T., Miller, D. A. W., & Nichols, J. D. (2015). Modeling false
   positive detections in species occurrence data under different study
