@@ -218,7 +218,7 @@ select_clips <- function(detections,
 
   # Lista de TODAS as gravacoes (so no modo "random_recordings")
   if (modo == "random_recordings") {
-    gravacoes <- list_recordings(selecao, recordings, audio_pattern,
+    gravacoes <- get_recordings(selecao, recordings, audio_pattern,
                                  remap_from, remap_to)
   }
 
@@ -483,7 +483,7 @@ manifest_columns <- c(
 
 # Lista todas as gravacoes de cada local: a tabela dada (data frame ou
 # csv) ou list.files() nas pastas de audio que aparecem em begin_path
-list_recordings <- function(selecao, recordings, audio_pattern,
+get_recordings <- function(selecao, recordings, audio_pattern,
                             remap_from, remap_to) {
   if (!is.null(recordings)) {
     if (is.character(recordings)) {
