@@ -26,10 +26,22 @@ parts of the gradient lack reviewed clips.}
 }
 \value{
 A tibble with \code{site}, \code{species_folder}, the \code{by} columns, \code{bin},
-\code{n_reviewed}, \code{n_positive}, \code{precision} and \code{low_support}.
+\code{n_reviewed}, \code{n_positive}, \code{precision}, \code{precision_weighted} (only
+with \code{inclusion_prob}) and \code{low_support}.
 }
 \description{
 Precision (share of positive verdicts) of the reviewed clips, by site,
 species and confidence bin. Clips without confidence (whole recordings
 of \code{"random_recordings"}) are left out.
+}
+\details{
+When \code{validation} has \code{inclusion_prob} (clips drawn with
+\code{"random_detections"} in \code{\link[=select_clips]{select_clips()}}), the table also gets
+\code{precision_weighted}, the precision weighted by \code{1 / inclusion_prob}.
+It estimates the precision among all the predictions of the bin from
+which the clips were drawn, not only among the reviewed ones; the two
+differ when the clips of a bin come from strata drawn with different
+probabilities. It is \code{NA} in bins with any clip without
+\code{inclusion_prob} (clips of \code{"top"}). A blind review manifest may lack
+\code{inclusion_prob}: join it back from the full manifest first.
 }

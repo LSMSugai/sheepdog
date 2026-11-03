@@ -152,6 +152,10 @@ run_app <- function(manifest = NULL, clips_dir = NULL, verdicts_file = NULL,
 #'   reviewer, ready for [reviewer_agreement()] and
 #'   [consensus_verdicts()].
 #'
+#' A clip marked more than once by the same reviewer keeps the last
+#' verdict; a message says how many clips were marked again and how many of
+#' them changed verdict.
+#'
 #' @return The manifest with `verdict` (`"positive"`, `"negative"`,
 #'   `"uncertain"` or `"not_reviewed"`), `reviewed_path` and `reviewer`.
 #'   With `reviewer = NULL`, a clip reviewed by two reviewers has two
@@ -161,8 +165,10 @@ run_app <- function(manifest = NULL, clips_dir = NULL, verdicts_file = NULL,
 app_verdicts <- function(manifest, verdicts_file, clips_dir = NULL,
                          reviewer = NULL) {
   manifesto <- read_manifest(manifest)
-  log <- read_verdict_log(verdicts_file)
+  log <- read_verdict_log(verdicts_file, last_only = FALSE)
   if (!is.null(reviewer)) log <- log[log$reviewer %in% reviewer, ]
+  report_remarked(log)
+  log <- last_verdicts(log)
   fora <- setdiff(log$clip_file, manifesto$clip_file)
   if (length(fora) > 0) {
     warning(length(fora), " clip(s) of `verdicts_file` are not in the ",
@@ -182,6 +188,21 @@ app_verdicts <- function(manifest, verdicts_file, clips_dir = NULL,
   message("Clips in the manifest: ", nrow(manifesto), "\n",
           paste0("  ", contagem$verdict, ": ", contagem$n, collapse = "\n"))
   out
+}
+
+# Quantos clipes cada revisor marcou mais de uma vez, e quantos com
+# vereditos diferentes
+report_remarked <- function(log) {
+  vezes <- log |>
+    group_by(clip_file, species_folder, reviewer) |>
+    summarise(n = n(), n_verdicts = n_distinct(verdict), .groups = "drop")
+  remarcados <- sum(vezes$n > 1)
+  if (remarcados > 0) {
+    message(remarcados, " clip(s) marked more than once by the same ",
+            "reviewer, ", sum(vezes$n_verdicts > 1), " of them with ",
+            "different verdicts; the last verdict counts.")
+  }
+  invisible(vezes)
 }
 
 # Clipes da fila do app: os do revisor (com assign_reviewers()) e o
@@ -239,8 +260,9 @@ append_verdict <- function(file, clip_file, species_folder, reviewer,
   invisible(linha)
 }
 
-# Ultimo veredito de cada clipe e revisor
-read_verdict_log <- function(file) {
+# Ultimo veredito de cada clipe e revisor (com last_only = FALSE, todas as
+# linhas, na ordem dos cliques)
+read_verdict_log <- function(file, last_only = TRUE) {
   vazio <- tibble(clip_file = character(), species_folder = character(),
                   reviewer = character(), verdict = character(),
                   time = character())
@@ -257,7 +279,12 @@ read_verdict_log <- function(file) {
     stop("Unknown verdict(s) in `verdicts_file`: ",
          paste(invalidos, collapse = ", "), call. = FALSE)
   }
-  # a ordem das linhas e a ordem dos cliques: vale a ultima
+  if (!last_only) return(log)
+  last_verdicts(log)
+}
+
+# a ordem das linhas e a ordem dos cliques: vale a ultima
+last_verdicts <- function(log) {
   log$.ordem <- seq_len(nrow(log))
   log |>
     arrange(desc(.ordem)) |>

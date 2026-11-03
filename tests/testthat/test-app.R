@@ -280,3 +280,82 @@ test_that("the export tab writes the occupancy tables with the verdicts", {
       expect_true(any(grepl("^Error", notas())))
     })
 })
+
+test_that("app_verdicts() reports the clips marked more than once", {
+  d <- withr::local_tempdir()
+  man <- app_dados(d)
+  f <- file.path(d, "verdicts.csv")
+  append_verdict(f, "clip1.wav", "sp_a", "ana", "positive")
+  append_verdict(f, "clip1.wav", "sp_a", "ana", "positive")
+  append_verdict(f, "clip2.wav", "sp_a", "ana", "positive")
+  append_verdict(f, "clip2.wav", "sp_a", "ana", "negative")
+  append_verdict(f, "clip3.wav", "sp_a", "bia", "positive")
+  msgs <- character()
+  v <- withCallingHandlers(
+    app_verdicts(man, f, reviewer = "ana"),
+    message = function(m) {
+      msgs <<- c(msgs, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    })
+  expect_true(any(grepl("2 clip\\(s\\) marked more than once by the same reviewer, 1 of them",
+                        msgs)))
+  expect_identical(v$verdict[v$clip_file == "clip2.wav"], "negative")
+  # um clipe marcado por dois revisores nao conta como remarcado
+  append_verdict(f, "clip3.wav", "sp_a", "ana", "negative")
+  msgs <- character()
+  withCallingHandlers(
+    app_verdicts(man, f, reviewer = "bia"),
+    message = function(m) {
+      msgs <<- c(msgs, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    })
+  expect_false(any(grepl("more than once", msgs)))
+})
+
+test_that("post_validation() reads the verdicts file of the app", {
+  d <- withr::local_tempdir()
+  man <- app_dados(d)
+  man$confidence <- c(0.6, 0.7, 0.8, 0.6, 0.7, 0.9)
+  man$source_audio <- "rec.wav"
+  f <- file.path(d, "verdicts.csv")
+  append_verdict(f, "clip1.wav", "sp_a", "ana", "positive")
+  append_verdict(f, "clip2.wav", "sp_a", "bia", "negative")
+  append_verdict(f, "clip4.wav", "sp_b", "bia", "positive")
+  append_verdict(f, "clip4.wav", "sp_b", "bia", "negative")
+  saida <- file.path(d, "pv")
+  res <- suppressMessages(post_validation(
+    file.path(d, "clips"), man, saida, verdicts_file = f, min_n = 1))
+  expect_true(file.exists(file.path(saida, "validation_by_clip.csv")))
+  expect_identical(nrow(res$validation), 6L)
+  expect_identical(res$validation$verdict,
+                   c("positive", "negative", "not_reviewed", "negative",
+                     rep("not_reviewed", 2)))
+  expect_true(all(file.exists(res$validation$reviewed_path)))
+  expect_identical(sum(res$precision$n_reviewed), 3L)
+  # so um revisor
+  so_ana <- suppressMessages(post_validation(
+    manifest_path = man, output_dir = file.path(d, "pv_ana"),
+    verdicts_file = f, reviewer = "ana", min_n = 1))
+  expect_identical(sum(so_ana$validation$verdict == "positive"), 1L)
+  # dois revisores no mesmo clipe: consenso
+  append_verdict(f, "clip1.wav", "sp_a", "bia", "negative")
+  cons <- suppressMessages(post_validation(
+    manifest_path = man, output_dir = file.path(d, "pv_cons"),
+    verdicts_file = f, min_n = 1))
+  expect_identical(nrow(cons$validation), 6L)
+  expect_identical(cons$validation$verdict[cons$validation$clip_file ==
+                                             "clip1.wav"], "disagreement")
+  # com inclusion_prob, as tabelas ganham a precisao ponderada
+  man$inclusion_prob <- 0.5
+  expect_message(
+    pond <- post_validation(manifest_path = man,
+                            output_dir = file.path(d, "pv_pond"),
+                            verdicts_file = f, reviewer = "bia", min_n = 1),
+    "weighted by 1 / inclusion_prob")
+  expect_true("precision_weighted" %in% names(pond$precision))
+  expect_error(post_validation(manifest_path = man, output_dir = saida),
+               "Give `review_dir`")
+  expect_error(suppressMessages(post_validation(
+    manifest_path = man, output_dir = saida, verdicts_file = f,
+    reviewer = "zeca")), "Check `verdicts_file`")
+})
