@@ -6,11 +6,11 @@
 [![Codecov](https://codecov.io/gh/diogoprov/sheepdog/graph/badge.svg)](https://app.codecov.io/gh/diogoprov/sheepdog)
 
 In the fable, the boy cries "wolf!" and the villagers have to decide whether
-the wolf is real. **sheepdog** does that check for automated detections from
-[BirdNET](https://github.com/birdnet-team/BirdNET-Analyzer) custom classifiers
+the wolf is real. **sheepdog** does that check for automated predictions from
+[BirdNET](https://github.com/birdnet-team/BirdNET-Analyzer) pretrained and custom classifiers
 in passive acoustic monitoring (PAM). It runs three stages:
 
-1. **Validation data.** Build clip sets for manual review from the BirdNET
+1. **Validation data.** Build clip sets for manual review from the output BirdNET
    selection tables: top-score, random-occasion or random-recording designs,
    one folder per species, ready for the review tab of the BirdNET GUI. The
    random draws can be stratified along an environmental gradient. Then
@@ -27,9 +27,9 @@ in passive acoustic monitoring (PAM). It runs three stages:
 
 sheepdog was developed for the FrogNet project (anurans of the Pantanal and
 Cerrado, Mato Grosso do Sul, Brazil), but it works with the output of any
-BirdNET custom classifier. `export_occupancy_data()` writes its validation
-and calibration outputs in a documented format for occupancy models with
-false positives, such as those fitted with
+BirdNET pretrained and custom classifier. `export_occupancy_data()` writes its
+validation and calibration outputs in a documented format for occupancy models
+with false positives, such as those fitted with
 [crywolf](https://github.com/diogoprov/crywolf).
 The two packages are independent: sheepdog does not depend on crywolf.
 
@@ -53,7 +53,7 @@ The development version can be installed from GitHub:
 remotes::install_github("diogoprov/sheepdog")
 ```
 
-Cutting audio needs [av](https://cran.r-project.org/package=av) (it bundles
+BirdNET works on 3s clips. Creating audio snippets needs [av](https://cran.r-project.org/package=av) (it bundles
 ffmpeg), the hierarchical calibration needs
 [lme4](https://cran.r-project.org/package=lme4), and the figures need
 [ggplot2](https://cran.r-project.org/package=ggplot2):
@@ -64,8 +64,8 @@ install.packages(c("av", "lme4", "ggplot2"))
 
 ## Calibration performance
 
-For one species, calibration automatically compares global and site-effect
-models; with one site, it keeps only estimable candidates. Explicit model
+In threshold-based approaches, calibration automatically compares global and site-effect
+models per species; with one site, it keeps only estimable candidates. Explicit model
 lists remain available in `compare_calibration_models()`.
 
 The [performance article](https://provetelab.org/sheepdog/articles/performance.html)
