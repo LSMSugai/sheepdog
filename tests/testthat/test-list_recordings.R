@@ -48,6 +48,10 @@ test_that("list_recordings() needs a site for loose files", {
   rec <- suppressMessages(list_recordings(raiz, site = "ARA"))
   expect_equal(rec$site, "ARA")
   expect_error(list_recordings(file.path(raiz, "none")), "existing folder")
+  expect_error(list_recordings(raiz, site = c("A", "B")), "single site")
+  expect_error(list_recordings(raiz, site = "ARA",
+                               predictions = data.frame(x = 1)),
+               "lacks the column begin_path")
   expect_error(list_recordings(raiz, audio_pattern = "\\.mp4$"),
                "No audio file")
 })
