@@ -5,7 +5,7 @@
 app_state <- function(manifest = NULL, clips_dir = NULL, verdicts_file = NULL,
                       reviewer = NULL, max_freq = NULL, selection_dir = NULL,
                       output_dir = NULL, recordings = NULL, audio_dir = NULL,
-                      classifier = NULL) {
+                      site_pattern = NULL, classifier = NULL) {
   st <- new.env(parent = emptyenv())
   st$manifest <- manifest
   st$clips_dir <- clips_dir
@@ -16,6 +16,7 @@ app_state <- function(manifest = NULL, clips_dir = NULL, verdicts_file = NULL,
   st$selection_dir <- selection_dir
   st$output_dir <- output_dir
   st$audio_dir <- audio_dir
+  st$site_pattern <- site_pattern
   # CSV das gravacoes dado a run_app(): e ele que a pasta de audio atualiza
   st$recordings_arg <- if (is.character(recordings)) recordings else NULL
   st$recordings_file <- st$recordings_arg
@@ -47,13 +48,13 @@ load_app_state <- function(st) {
   }
 
   st$detections <- if (!is.null(st$selection_dir)) {
-    read_selection_tables(st$selection_dir)
+    read_selection_tables(st$selection_dir, site_pattern = st$site_pattern)
   }
 
   if (!is.null(st$audio_dir)) {
     alvo <- if (!is.null(st$recordings_arg)) st$recordings_arg else
       if (!is.null(st$output_dir)) file.path(st$output_dir, "recordings.csv")
-    st$recordings <- app_recordings(st$audio_dir, alvo)
+    st$recordings <- app_recordings(st$audio_dir, alvo, st$site_pattern)
     st$recordings_file <- alvo
   } else if (!is.null(st$recordings_file) && file.exists(st$recordings_file)) {
     st$recordings <- read_csv(st$recordings_file, show_col_types = FALSE)
@@ -81,7 +82,11 @@ load_app_state <- function(st) {
 
 # Lista as gravacoes da pasta de audio; arquivos soltos na pasta ficam com o
 # nome da pasta como local
-app_recordings <- function(audio_dir, file = NULL) {
+app_recordings <- function(audio_dir, file = NULL, site_pattern = NULL) {
+  if (!is.null(site_pattern)) {
+    return(list_recordings(audio_dir, site_pattern = site_pattern,
+                           file = file))
+  }
   tryCatch(list_recordings(audio_dir, file = file), error = function(e) {
     if (!grepl("directly in `audio_dir`", conditionMessage(e))) stop(e)
     list_recordings(audio_dir, site = basename(sub("/+$", "", audio_dir)),
@@ -99,8 +104,10 @@ needs_folders_ui <- function() {
              shiny::strong("Intro > Audio panel"), "to use this tab."))
 }
 
-# Janela do sistema para escolher uma pasta: RStudio, Windows ou macOS.
-# NULL quando nao ha como abrir a janela ou nada foi escolhido.
+# Janela do sistema para escolher uma pasta: RStudio, Windows, macOS ou
+# Linux (tcltk). NULL quando nao ha como abrir a janela ou nada foi escolhido.
+# As chamadas ao sistema ficam em funcoes proprias (dir_dialog_*), que os
+# testes substituem.
 choose_dir <- function(default = NULL, caption = "Choose a folder") {
   inicio <- if (!is.null(default) && nzchar(default) &&
                 dir.exists(path.expand(default))) {
@@ -110,29 +117,56 @@ choose_dir <- function(default = NULL, caption = "Choose a folder") {
   }
   vazio <- function(d) is.null(d) || length(d) == 0 || is.na(d[1]) ||
     !nzchar(d[1])
-  if (requireNamespace("rstudioapi", quietly = TRUE) &&
-      rstudioapi::isAvailable()) {
-    d <- tryCatch(rstudioapi::selectDirectory(caption, path = inicio),
-                  error = function(e) NULL)
-    return(if (vazio(d)) NULL else d)
+  d <- if (dir_dialog_rstudio_available()) {
+    dir_dialog_rstudio(caption, inicio)
+  } else {
+    switch(dir_dialog_os(),
+           Windows = dir_dialog_windows(inicio, caption),
+           Darwin = dir_dialog_macos(inicio, caption),
+           Linux = if (dir_dialog_tcltk_available()) {
+             dir_dialog_tcltk(inicio, caption)
+           },
+           NULL)
   }
-  so <- Sys.info()[["sysname"]]
-  if (identical(so, "Windows")) {
-    escolher <- get("choose.dir", envir = asNamespace("utils"))
-    d <- escolher(inicio, caption)
-    return(if (vazio(d)) NULL else d)
-  }
-  if (identical(so, "Darwin")) {
-    cmd <- sprintf(paste0("POSIX path of (choose folder with prompt \"%s\" ",
-                          "default location POSIX file \"%s\")"),
-                   gsub("\"", "", caption), gsub("\"", "", inicio))
-    d <- suppressWarnings(tryCatch(
-      system2("osascript", c("-e", shQuote(cmd)), stdout = TRUE,
-              stderr = FALSE),
-      error = function(e) character()))
-    return(if (vazio(d)) NULL else sub("/+$", "", d[1]))
-  }
-  NULL
+  if (vazio(d)) NULL else sub("/+$", "", d[1])
+}
+
+dir_dialog_os <- function() Sys.info()[["sysname"]]
+
+dir_dialog_rstudio_available <- function() {
+  requireNamespace("rstudioapi", quietly = TRUE) && rstudioapi::isAvailable()
+}
+
+dir_dialog_rstudio <- function(caption, inicio) {
+  tryCatch(rstudioapi::selectDirectory(caption, path = inicio),
+           error = function(e) NULL)
+}
+
+dir_dialog_windows <- function(inicio, caption) {
+  # utils::choose.dir() so existe no Windows
+  escolher <- get("choose.dir", envir = asNamespace("utils"))
+  escolher(inicio, caption)
+}
+
+dir_dialog_macos <- function(inicio, caption) {
+  cmd <- sprintf(paste0("POSIX path of (choose folder with prompt \"%s\" ",
+                        "default location POSIX file \"%s\")"),
+                 gsub("\"", "", caption), gsub("\"", "", inicio))
+  suppressWarnings(tryCatch(
+    system2("osascript", c("-e", shQuote(cmd)), stdout = TRUE,
+            stderr = FALSE),
+    error = function(e) character()))
+}
+
+# O tcltk precisa de uma tela (DISPLAY); num servidor sem tela a janela nao
+# abre e o caminho e digitado no campo
+dir_dialog_tcltk_available <- function() {
+  isTRUE(capabilities("tcltk")) && nzchar(Sys.getenv("DISPLAY")) &&
+    requireNamespace("tcltk", quietly = TRUE)
+}
+
+dir_dialog_tcltk <- function(inicio, caption) {
+  tryCatch(tcltk::tk_choose.dir(inicio, caption), error = function(e) NULL)
 }
 
 # ---------------------------------------------------------------------------
@@ -172,6 +206,15 @@ setup_ui <- function(id, st) {
         campo("output_dir", paste(
           "Where the clips, the manifest, the verdicts and the export are",
           "written (output_dir). Created if missing.")),
+        shiny::textInput(ns("site_pattern"), "Site from the file name",
+                         if (is.null(st$site_pattern)) "" else
+                           st$site_pattern, width = "100%"),
+        hint(paste(
+          "Optional. When the recordings or the tables of several sites",
+          "share a folder: a regular expression with the site in",
+          "parentheses, e.g. <code>^[^_]+_([^_]+)_</code> reads Campus01",
+          "from Campinas_Campus01_20261003_074339.flac. Empty: the site is",
+          "the folder name.")),
         shiny::actionButton(ns("apply"), "Apply and reload",
                             class = "btn-primary")),
       shiny::column(5, shiny::h4("Loaded"), shiny::uiOutput(ns("status")))),
@@ -242,6 +285,10 @@ setup_server <- function(id, st, root, on_apply = function() NULL) {
         if (nzchar(v)) sub("/+$", "", path.expand(v)) else NULL
       })
       names(novo) <- names(setup_fields)
+      padrao <- trimws(if (is.null(input$site_pattern)) "" else
+        input$site_pattern)
+      # list(NULL) guarda o NULL (novo$x <- NULL apagaria o elemento)
+      novo["site_pattern"] <- list(if (nzchar(padrao)) padrao else NULL)
       for (n in c("audio_dir", "selection_dir")) {
         if (!is.null(novo[[n]]) && !dir.exists(novo[[n]])) {
           shiny::showNotification(
@@ -250,8 +297,9 @@ setup_server <- function(id, st, root, on_apply = function() NULL) {
           return()
         }
       }
-      chaves <- c(names(setup_fields), "clips_dir", "verdicts_file",
-                  "manifest", "recordings_file", "recordings")
+      chaves <- c(names(setup_fields), "site_pattern", "clips_dir",
+                  "verdicts_file", "manifest", "recordings_file",
+                  "recordings")
       antes <- mget(chaves, envir = st)
       if (!identical(antes$output_dir, novo$output_dir)) {
         st$clips_dir <- NULL
@@ -306,22 +354,8 @@ setup_server <- function(id, st, root, on_apply = function() NULL) {
     })
 
     output$summary <- shiny::renderUI({
-      det <- st$detections
       esp <- input$species
-      if (!is.null(det) && length(esp) > 0) {
-        det <- det[as.character(det$species_code) %in% esp, ]
-      }
-      rec <- st$recordings
-      if (is.null(rec) && !is.null(st$detections)) {
-        rec <- distinct(tibble(
-          site = as.character(st$detections$site),
-          source_audio = remap_path(st$detections$begin_path)))
-        attr(rec, "from_detections") <- TRUE
-      }
-      tab <- recording_summary(rec, det)
-      if (!is.null(tab) && isTRUE(attr(rec, "from_detections"))) {
-        attr(tab, "from_detections") <- TRUE
-      }
+      tab <- recording_summary(st$recordings, st$detections, species = esp)
       if (is.null(tab)) {
         return(shiny::p("Choose the audio folder or the BirdNET results to",
                         "see the recordings."))
@@ -370,15 +404,21 @@ confirm_folders <- function(st, input, session) {
 # Resumo das gravacoes: local x dia
 
 # Uma linha por local x dia: gravacoes, horas gravadas, horas com alguma
-# predicao (qualquer especie e score) e o total de predicoes. Sem a lista
-# de gravacoes, usa os arquivos das predicoes.
-recording_summary <- function(recordings = NULL, detections = NULL) {
+# predicao (qualquer score) e o total de predicoes. Sem a lista de
+# gravacoes, usa os arquivos de todas as predicoes. `species` limita so as
+# contagens de predicoes, nao as gravacoes.
+recording_summary <- function(recordings = NULL, detections = NULL,
+                              species = NULL) {
   de_det <- is.null(recordings)
   if (de_det) {
     if (is.null(detections) || nrow(detections) == 0) return(NULL)
     recordings <- distinct(tibble(
       site = as.character(detections$site),
       source_audio = remap_path(detections$begin_path)))
+  }
+  if (!is.null(detections) && length(species) > 0) {
+    detections <- detections[as.character(detections$species_code) %in%
+                               species, ]
   }
   rec <- tibble(site = as.character(recordings$site),
                 arquivo = basename(remap_path(recordings$source_audio)))

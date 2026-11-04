@@ -10,6 +10,7 @@ extract_validation_clips(
   ...,
   table_pattern = "^BirdNET_SelectionTable\\\\.txt$",
   per_audio_pattern = "\\\\.BirdNET\\\\.selection\\\\.table\\\\.txt$",
+  site_pattern = NULL,
   make_zip = TRUE,
   simulate = FALSE,
   classifier = NULL
@@ -29,6 +30,13 @@ tables.}
 
 \item{per_audio_pattern}{Regular expression for the file names of
 per-audio tables. \code{NULL} reads only combined tables.}
+
+\item{site_pattern}{Optional regular expression with one capture group
+that takes the site from the name of the audio file in \verb{Begin Path},
+instead of from the folder of the table. For example,
+\code{"^[^_]+_([^_]+)_"} reads \code{Campus01} from
+\code{Campinas_Campus01_20261003_074339.flac}. Use the same pattern in
+\code{\link[=list_recordings]{list_recordings()}}.}
 
 \item{make_zip}{Zip one package per species (skipped when \code{simulate} is
 \code{TRUE}).}

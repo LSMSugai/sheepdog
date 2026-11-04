@@ -35,3 +35,27 @@ require_suggested <- function(pkg, para) {
          "install.packages(\"", pkg, "\").", call. = FALSE)
   }
 }
+
+# Sitio tirado do nome do arquivo: `pattern` e uma expressao regular com um
+# grupo de captura, aplicada ao nome sem a pasta (ex. "^[^_]+_([^_]+)_" para
+# Campinas_Campus01_20261003_074339.flac)
+site_from_name <- function(paths, pattern) {
+  if (!is.character(pattern) || length(pattern) != 1 || is.na(pattern) ||
+      !nzchar(pattern)) {
+    stop("`site_pattern` must be a single regular expression.",
+         call. = FALSE)
+  }
+  nomes <- basename(str_replace_all(paths, fixed("\\"), "/"))
+  m <- str_match(nomes, pattern)
+  if (ncol(m) < 2) {
+    stop("`site_pattern` needs a capture group around the site, e.g. ",
+         "\"^[^_]+_([^_]+)_\".", call. = FALSE)
+  }
+  sitio <- m[, 2]
+  falha <- is.na(sitio) | !nzchar(sitio)
+  if (any(falha)) {
+    stop(sum(falha), " file name(s) do not match `site_pattern` ", pattern,
+         " (e.g. ", nomes[falha][1], ").", call. = FALSE)
+  }
+  sitio
+}
