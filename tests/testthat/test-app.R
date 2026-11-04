@@ -209,7 +209,10 @@ test_that("the sampling tab draws, then cuts and writes the manifest", {
                         replace = FALSE)
       session$setInputs(cut = 1)
       expect_match(notas(), "Draw the clips first")
+      expect_error(output$counts_title)
       session$setInputs(draw = 1)
+      expect_match(output$counts_title$html, "Clips per site and species")
+      expect_match(output$inclusion_title$html, "Inclusion probability")
       sel <- selecao()
       ref <- suppressWarnings(suppressMessages(select_clips(
         det, sampling_mode = "random_detections", threshold = 0.5,
@@ -430,6 +433,11 @@ test_that("the spectrogram takes the palette, the FFT window and the band", {
   grDevices::png(png)
   expect_no_error(plot_spectrogram(f, max_freq = 2, fft = 512L,
                                    overlap = 0.9, palette = "Viridis"))
+  # o topo do eixo e o pedido, qualquer que seja o FFT
+  for (fft in c(256L, 512L, 1024L)) {
+    g <- plot_spectrogram(f, max_freq = 2, fft = fft)
+    expect_equal(g$usr[4], 2)
+  }
   expect_no_error(plot_spectrogram(f, fft = 2048L, palette = "Gray"))
   expect_no_error(plot_spectrogram(f, brightness = 0.3, contrast = 2))
   expect_no_error(plot_spectrogram(f, palette = "Mako", brightness = -0.5,
