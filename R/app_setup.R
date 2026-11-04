@@ -375,8 +375,11 @@ setup_server <- function(id, st, root, on_apply = function() NULL) {
 confirm_folders <- function(st, input, session) {
   if (isTRUE(st$confirmed) || length(st$given) == 0) return(invisible())
   itens <- lapply(names(st$given), function(n) {
-    shiny::tags$li(shiny::strong(setup_fields[[n]], ": "),
-                   shiny::code(st$given[[n]]))
+    # caminhos longos quebram a linha em vez de sair da janela
+    shiny::tags$li(shiny::strong(paste0(setup_fields[[n]], ": ")),
+                   shiny::code(st$given[[n]],
+                               style = paste("white-space: normal;",
+                                             "word-break: break-all;")))
   })
   shiny::showModal(shiny::modalDialog(
     title = "Are these folders still right?",
