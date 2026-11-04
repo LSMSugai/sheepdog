@@ -30,7 +30,7 @@ digraph pipeline {
 
   audios [label = "Recordings\n..._YYYYMMDD_HHMMSS (.wav, .flac, .mp3)",
           shape = note, fillcolor = "#ffffff", color = "#b8b8b8"]
-  birdnet [label = "BirdNET custom classifier\nBirdNET_SelectionTable.txt per site",
+  birdnet [label = "BirdNET classifier (pretrained or custom)\nBirdNET_SelectionTable.txt per site",
            fillcolor = "#eeeeee", color = "#9a9a9a"]
 
   /* ------- ESTAGIO 1: dados de validacao ------- */
@@ -39,15 +39,19 @@ digraph pipeline {
     fontcolor = "#1f5c8b"; color = "#bcd4e6"; style = "rounded"
     bgcolor = "#eef5fb"
 
+    listar [label = "list_recordings()\nevery recording made,\nwith or without predictions",
+            fillcolor = "#d9e9f8"]
     extrair [label = "extract_validation_clips()\nread_selection_tables() > select_clips()\n> cut_clips() > pack_clips()\nrandom draws stratified within site x species\n(night, hour, month, ... or covariate_bins())",
              fillcolor = "#d9e9f8"]
     manifesto [label = "clip_manifest.csv\nclips/<species_folder>/, packages/<species_folder>.zip",
                shape = note, fillcolor = "#ffffff"]
     gui [label = "Manual review in the BirdNET GUI\nPositive / Negative folders",
          fillcolor = "#d9e9f8"]
+    app [label = "Manual review in run_app()\nverdicts.csv; the app also draws and cuts\nthe clips and exports the occupancy tables",
+         fillcolor = "#d9e9f8"]
     revisores [label = "Several reviewers (optional)\nassign_reviewers(), split_by_reviewer(),\nreviewer_agreement(), consensus_verdicts()",
                fillcolor = "#d9e9f8"]
-    posval [label = "post_validation()\nclassify_review(), precision_by_bin(),\nsuggest_thresholds(), nightly_presence()",
+    posval [label = "post_validation()\nreview folders or verdicts_file;\nclassify_review(), precision_by_bin(),\nsuggest_thresholds(), nightly_presence()",
             fillcolor = "#d9e9f8"]
     tpfp [label = "validation_by_clip.csv\nmanifest + verdict per clip\n(positive / negative / not reviewed)",
           shape = note, fillcolor = "#ffffff"]
@@ -65,6 +69,8 @@ digraph pipeline {
         fillcolor = "#fceecf"]
     fit [label = "fit_calibration()\nselected model refitted to all clips\nengine = \\"lme4\\" or \\"brms\\"",
          fillcolor = "#fceecf"]
+    limiares [label = "calibrated_thresholds()\na threshold per site x species\nfrom the model (thresholds.csv)",
+              fillcolor = "#fceecf"]
     bayes [label = "Bayesian checks (brms)\ncalibration_prior(), calibration_diagnostics(),\ncalibration_ppc(), calibration_sensitivity()",
            fillcolor = "#fceecf"]
     prever [label = "score_detections()\nP(TP) for every detection\n(calibrated species only)",
@@ -107,10 +113,15 @@ digraph pipeline {
   /* ------- FLUXO ------- */
   audios  -> birdnet
   birdnet -> extrair
+  audios  -> listar [style = dashed]
+  listar  -> extrair [style = dashed]
   extrair -> manifesto
   manifesto -> gui
+  manifesto -> app
   gui     -> posval
+  app     -> posval
   gui     -> revisores [style = dashed]
+  app     -> revisores [style = dashed]
   revisores -> posval [style = dashed]
   posval  -> tpfp
   tpfp    -> suporte [style = dashed]
@@ -118,6 +129,7 @@ digraph pipeline {
   tpfp    -> cv [label = " calibrate()"]
   cv      -> fit [label = " selected model"]
   fit     -> bayes [style = dashed]
+  fit     -> limiares [style = dashed]
   fit     -> prever
   birdnet -> prever [label = " every detection\n (not only the reviewed ones)", style = dashed]
   prever  -> historico
