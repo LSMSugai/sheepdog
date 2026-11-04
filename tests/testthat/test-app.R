@@ -371,13 +371,18 @@ test_that("locate_audio() finds moved recordings by file name", {
                                    "b_20261003_085442.flac",
                                    "c_20261004_062102.flac"))
   chk <- locate_audio(c(antigos, antigos[1]), file.path(d, "new"))
+  # no Windows o tempdir() vem com barras invertidas, e locate_audio()
+  # devolve barras normais: compara os caminhos com barras normais
+  barras <- function(x) gsub("\\\\", "/", x)
   expect_identical(chk$n, 3L)
   expect_identical(chk$missing, antigos)
-  expect_identical(unname(chk$found),
-                   file.path(d, "new", "Campinas", basename(antigos[1:2])))
+  expect_identical(barras(unname(chk$found)),
+                   barras(file.path(d, "new", "Campinas",
+                                    basename(antigos[1:2]))))
   expect_identical(names(chk$found), antigos[1:2])
-  expect_identical(chk$remap, paste0(c(file.path(d, "old"),
-                                       file.path(d, "new", "Campinas")), "/"))
+  expect_identical(barras(chk$remap),
+                   barras(paste0(c(file.path(d, "old"),
+                                   file.path(d, "new", "Campinas")), "/")))
   # sem pasta de audio: so lista as ausentes
   expect_length(locate_audio(antigos)$found, 0)
   # nomes repetidos na pasta de audio sao ambiguos e ficam de fora
