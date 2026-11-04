@@ -75,6 +75,13 @@ the minimum score, filters by site, species and hour, the seed, and the
 remapping of the audio paths when the recordings moved since BirdNET read
 them.
 
+After each draw, the app checks that the recordings of the drawn clips
+exist. When some are missing and *Audio folder* names the folder where the
+recordings are now (subfolders included), the app looks for them there by
+file name and asks whether to use the files it found. If you accept, the
+manifest keeps the BirdNET path in `begin_path` and the new one in
+`source_audio`, and `extraction_info.csv` records the audio folder.
+
 *Draw* runs `select_clips()` without touching the audio and shows the
 number of clips per site and species and the inclusion probability of
 the clips of each species (minimum, median and maximum), which the
@@ -105,7 +112,8 @@ own, and the buttons:
 | Positive | `p` | the species is heard in the clip |
 | Negative | `n` | it is not |
 | Uncertain | `u` | the reviewer cannot tell |
-| Next, Previous | right arrow or space, left arrow | none: moves through the queue |
+| Next, Previous | right arrow, left arrow | none: moves through the queue |
+| Play, pause | space | none: plays or pauses the clip |
 
 After a verdict, the app moves to the next clip. A clip can be reviewed
 again by going back to it (untick *Only clips not yet reviewed* to see
