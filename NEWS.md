@@ -29,6 +29,9 @@
   list of the audio folder made by the Audio panel instead of scanning the
   folder again at each draw, and the folder dialog also works on Linux
   (through 'tcltk', when there is a display).
+- The review-app article describes the Intro tab, the Audio panel and its
+  recording summary, `site_pattern` and the spectrogram controls, and
+  gives the new default of `max_freq` (12 kHz).
 
 - `post_validation()` reads the verdicts of the review app: with
   `verdicts_file` (and optionally `reviewer`) it takes the verdicts from
