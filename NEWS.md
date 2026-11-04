@@ -1,5 +1,26 @@
 # sheepdog (development version)
 
+- `run_app()`: the app opens on a new Intro tab with a graphical abstract
+  of the sampling designs and an Audio panel, where the audio folder (new
+  `audio_dir` argument, listed into `recordings.csv`), the BirdNET results
+  and the validation folder can be chosen with the system's folder dialog.
+  Folders given to `run_app()` are confirmed when the app opens, and
+  `run_app()` can be called without arguments. The panel shows the
+  recordings per site and day, coloured by the share of hours with
+  predictions of the chosen species, with the number of predictions on
+  hover.
+- `run_app()`: every field has a short help note; the threshold is marked
+  "(required)" for `"random_detections"`. After each draw the Sampling tab
+  checks that the recordings exist and, with *Audio folder*, finds moved
+  recordings by file name and offers to use them. A cut that finds no
+  audio says so, and a manifest without cut clips no longer stops the app
+  from opening.
+- `run_app()`, Review tab: the spectrogram has a palette, the FFT window,
+  the maximum frequency (12 kHz by default, also `max_freq`), brightness
+  and contrast above it, uses 90% overlap, and a dashed line follows the audio. The clip number is shown
+  above the spectrogram, and space now plays or pauses the clip (the right
+  arrow moves to the next one).
+
 - `post_validation()` reads the verdicts of the review app: with
   `verdicts_file` (and optionally `reviewer`) it takes the verdicts from
   `run_app()` instead of the review folders, combines clips reviewed by

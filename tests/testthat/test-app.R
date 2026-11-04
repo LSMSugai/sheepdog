@@ -231,11 +231,13 @@ test_that("the sampling tab draws, then cuts and writes the manifest", {
       expect_identical(info$value[info$key == "select_clips.strata"],
                        "night")
       expect_identical(info$value[info$key == "classifier"], "test")
-      expect_identical(cortes(), 1L)
+      # sem nenhuma gravacao achada, avisa e nao recarrega a fila
+      expect_true(any(grepl("No recording was found", notas())))
+      expect_identical(cortes(), 0L)
       # nao sobrescreve o manifesto sem pedir
       session$setInputs(cut = 4)
       expect_match(notas(), "already exists")
-      expect_identical(cortes(), 1L)
+      expect_identical(cortes(), 0L)
       # top avisa que nao estima falsos positivos
       session$setInputs(mode = "top", draw = 2)
       expect_true(any(grepl("false-positive rate", notas())))
@@ -358,4 +360,84 @@ test_that("post_validation() reads the verdicts file of the app", {
   expect_error(suppressMessages(post_validation(
     manifest_path = man, output_dir = saida, verdicts_file = f,
     reviewer = "zeca")), "Check `verdicts_file`")
+})
+
+test_that("locate_audio() finds moved recordings by file name", {
+  d <- withr::local_tempdir()
+  dir.create(file.path(d, "new", "Campinas"), recursive = TRUE)
+  file.create(file.path(d, "new", "Campinas", c("a_20261002_092817.flac",
+                                                 "b_20261003_085442.flac")))
+  antigos <- file.path(d, "old", c("a_20261002_092817.flac",
+                                   "b_20261003_085442.flac",
+                                   "c_20261004_062102.flac"))
+  chk <- locate_audio(c(antigos, antigos[1]), file.path(d, "new"))
+  expect_identical(chk$n, 3L)
+  expect_identical(chk$missing, antigos)
+  expect_identical(unname(chk$found),
+                   file.path(d, "new", "Campinas", basename(antigos[1:2])))
+  expect_identical(names(chk$found), antigos[1:2])
+  expect_identical(chk$remap, paste0(c(file.path(d, "old"),
+                                       file.path(d, "new", "Campinas")), "/"))
+  # sem pasta de audio: so lista as ausentes
+  expect_length(locate_audio(antigos)$found, 0)
+  # nomes repetidos na pasta de audio sao ambiguos e ficam de fora
+  dir.create(file.path(d, "new", "copy"))
+  file.create(file.path(d, "new", "copy", "a_20261002_092817.flac"))
+  chk <- locate_audio(antigos, paste0(file.path(d, "new"), "/"))
+  expect_identical(names(chk$found), antigos[2])
+})
+
+test_that("the sampling tab offers to use the recordings of the audio folder", {
+  skip_if_not_installed("shiny")
+  ex <- system.file("extdata", "example", package = "sheepdog")
+  det <- suppressMessages(read_selection_tables(file.path(ex, "birdnet")))
+  out <- withr::local_tempdir()
+  aud <- withr::local_tempdir()
+  ref <- suppressWarnings(suppressMessages(select_clips(
+    det, sampling_mode = "random_detections", threshold = 0.5,
+    n_top = 1, strata = "night", sites = "ARA", seed = 2026)))
+  file.create(file.path(aud, basename(unique(ref$source_audio))))
+  shiny::testServer(sampling_server, args = list(
+    detections = det, selection_dir = file.path(ex, "birdnet"),
+    output_dir = out, classifier = "test"), {
+      session$setInputs(mode = "random_detections", occasion_unit = "file",
+                        threshold = 0.5, n_top = 1, strata = "night",
+                        target_total = NA, max_per_species = NA,
+                        min_confidence = 0.1, sites = "ARA", species = NULL,
+                        hour_start = NA, hour_end = NA, seed = 2026,
+                        remap_from = "", remap_to = "", audio_dir = aud,
+                        simulate = TRUE, replace = FALSE)
+      session$setInputs(draw = 1)
+      expect_length(audio()$found, length(unique(ref$source_audio)))
+      session$setInputs(relocate = 1)
+      expect_true(all(file.exists(selecao()$source_audio)))
+      expect_identical(selecao()$begin_path, ref$begin_path)
+      expect_identical(realocadas()$n, length(unique(ref$source_audio)))
+      expect_match(notas()[1], "now read from")
+    })
+})
+
+test_that("the spectrogram takes the palette, the FFT window and the band", {
+  skip_if_not_installed("av")
+  f <- withr::local_tempfile(fileext = ".wav")
+  escreve_wav(f, dur = 1)
+  png <- withr::local_tempfile(fileext = ".png")
+  grDevices::png(png)
+  expect_no_error(plot_spectrogram(f, max_freq = 2, fft = 512L,
+                                   overlap = 0.9, palette = "Viridis"))
+  expect_no_error(plot_spectrogram(f, fft = 2048L, palette = "Gray"))
+  expect_no_error(plot_spectrogram(f, brightness = 0.3, contrast = 2))
+  expect_no_error(plot_spectrogram(f, palette = "Mako", brightness = -0.5,
+                                   contrast = 0.25))
+  grDevices::dev.off()
+  expect_length(spectrogram_colours("Inferno"), 64)
+  expect_identical(spectrogram_colours("unknown"),
+                   grDevices::gray.colors(64, start = 0, end = 1))
+  skip_if_not_installed("shiny")
+  ui <- as.character(review_ui("r", max_freq = 8))
+  expect_match(ui, "Palette")
+  expect_match(ui, "Brightness")
+  expect_match(ui, "Contrast")
+  expect_match(ui, "FFT window")
+  expect_match(ui, 'value="8"')
 })

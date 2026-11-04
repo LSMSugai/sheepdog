@@ -53,6 +53,7 @@ Suggests:
     posterior,
     priorsense,
     rmarkdown,
+    rstudioapi,
     shiny,
     testthat (>= 3.0.0),
     vegan
