@@ -322,6 +322,8 @@ review_app <- function(fila, clips_dir, verdicts_file, reviewer,
   recurso <- "sheepdog_clips"
   dir.create(clips_dir, recursive = TRUE, showWarnings = FALSE)
   shiny::addResourcePath(recurso, normalizePath(clips_dir))
+  shiny::addResourcePath("sheepdog_app",
+                         system.file("app", package = "sheepdog"))
   completo <- !is.null(detections)
   titulo <- paste0("sheepdog", if (!is.null(reviewer)) paste0(" (", reviewer,
                                                                ")"))
@@ -331,8 +333,9 @@ review_app <- function(fila, clips_dir, verdicts_file, reviewer,
                      review_ui("review"))
   } else {
     shiny::navbarPage(
-      titulo, id = "tabs", selected = if (is.null(fila)) "Sampling" else
+      titulo, id = "tabs", selected = if (is.null(fila)) "Intro" else
         "Review",
+      shiny::tabPanel("Intro", intro_ui()),
       shiny::tabPanel("Sampling", sampling_ui("sampling", detections)),
       shiny::tabPanel("Review", review_ui("review")),
       shiny::tabPanel("Export", export_ui("export", output_dir)))
@@ -381,8 +384,10 @@ review_ui <- function(id) {
       shiny::sidebarPanel(
         width = 3,
         shiny::selectInput(ns("species"), "Species", c("All" = "")),
+        hint("Show only the clips of this species."),
         shiny::checkboxInput(ns("pending"), "Only clips not yet reviewed",
                              value = TRUE),
+        hint("Hide the clips that already have a verdict."),
         shiny::textOutput(ns("progress")),
         shiny::hr(),
         shiny::tableOutput(ns("info")),
@@ -539,6 +544,36 @@ review_server <- function(id, fila, verdicts_file, reviewer, recurso = "",
 }
 
 # Presets de estratos de select_clips()
+# Aba de abertura: a figura que resume os modos de amostragem
+intro_ui <- function() {
+  shiny::fluidRow(shiny::column(
+    12,
+    shiny::h3("How sheepdog picks the clips you review"),
+    shiny::p("Each panel shows one night of 30-minute recordings (simulated",
+             "scores) and which clips each sampling mode and occasion would",
+             "give. Choose the design in the Sampling tab, review the clips",
+             "in the Review tab and write the occupancy tables in the",
+             "Export tab."),
+    shiny::tags$img(src = "sheepdog_app/intro.png",
+                    alt = "Sampling modes, occasions and strata of sheepdog",
+                    style = "max-width: 100%; height: auto;")
+  ))
+}
+
+# Texto curto, cinza, sob o titulo de um campo
+hint <- function(...) {
+  shiny::tags$div(shiny::HTML(paste(...)), style = paste(
+    "margin-top: -10px; margin-bottom: 12px;",
+    "font-size: 0.85em; color: #6c757d;"))
+}
+
+# Titulo do limiar: obrigatorio so em "random_detections"
+threshold_label <- function(mode) {
+  paste0("Threshold of the occupancy analysis (",
+         if (identical(mode, "random_detections")) "required" else "optional",
+         ")")
+}
+
 strata_presets <- c("night_hour", "night", "hour", "week", "month",
                     "site_species")
 
@@ -554,39 +589,71 @@ sampling_ui <- function(id, detections) {
       width = 4,
       shiny::selectInput(ns("mode"), "Sampling mode",
                          c("random_detections", "top", "random_recordings")),
+      hint("<b>top</b>: only the highest-scored clips (n_top per night x",
+           "hour), for retraining and calibration.",
+           "<b>random_detections</b>: draw clips from occasions drawn at",
+           "random among those with detections above the threshold; every",
+           "detection above the threshold in a drawn occasion is a clip.",
+           "<b>random_recordings</b>: draw recordings (or minutes) at",
+           "random from everything recorded, with or without detections,",
+           "to annotate by ear."),
       shiny::selectInput(ns("occasion_unit"), "Occasion", c("file", "minute")),
-      num("threshold", "Threshold of the occupancy analysis (optional)",
+      hint("The unit of time over which a species counts as detected or",
+           "not at a site: a whole file or one minute of it."),
+      num("threshold", threshold_label("random_detections"),
           min = 0, max = 1, step = 0.05),
+      hint("Score from which a prediction counts as a detection. Needed by",
+           "random_detections; use the value of the occupancy analysis."),
       num("n_top", "n_top (per stratum, or per night x hour in top)", 2,
           min = 1),
+      hint("<b>top</b>: clips kept per site x species x night x hour.",
+           "<b>random_detections</b>: occasions drawn per stratum."),
       shiny::conditionalPanel(
         "input.mode == 'random_detections'", ns = ns,
-        shiny::selectInput(ns("strata"), "Strata", strata_presets)),
+        shiny::selectInput(ns("strata"), "Strata", strata_presets),
+        hint("Groups, within each site x species, in which the occasions",
+             "are drawn (e.g. night x hour).")),
       shiny::conditionalPanel(
         "input.mode == 'random_recordings'", ns = ns,
         num("recording_fraction", "Fraction of recordings per site", 0.01,
-            min = 0, max = 1)),
+            min = 0, max = 1),
+        hint("Share of the recordings (or minutes) of each site drawn, at",
+             "least one per site.")),
       num("target_total", "Total clips per site (optional)", min = 1),
+      hint("Split evenly among species. Not used by random_recordings."),
       num("max_per_species", "Maximum clips per site x species (optional)",
           min = 1),
+      hint("A fixed limit per site and species. Ignored when a total per",
+           "site is set."),
       num("min_confidence", "Minimum score", 0.1, min = 0, max = 1,
           step = 0.05),
+      hint("top only: predictions below this score are skipped. The",
+           "random modes use the threshold."),
       shiny::selectizeInput(ns("sites"), "Sites (all if empty)", sites,
                             multiple = TRUE),
+      hint("Draw only from these sites."),
       shiny::selectizeInput(ns("species"), "Species (all if empty)",
                             especies, multiple = TRUE),
+      hint("Draw only these species (short codes, e.g. boa-ran)."),
       shiny::fluidRow(
         shiny::column(6, num("hour_start", "From hour", min = 0, max = 23)),
         shiny::column(6, num("hour_end", "To hour", min = 0, max = 23))),
+      hint("Hours of the day (0-23) to draw from. The window can cross",
+           "midnight, e.g. 17 to 2."),
       num("seed", "Seed", 2026),
+      hint("Fixes the random draw, so the same seed gives the same clips."),
       shiny::textInput(ns("remap_from"), "Remap audio paths from (optional)"),
       shiny::textInput(ns("remap_to"), "to"),
+      hint("If the recordings moved since BirdNET ran, replace the start of",
+           "their paths, e.g. N:/ by /Volumes/Arara/."),
       shiny::actionButton(ns("draw"), "Draw", class = "btn-primary"),
       shiny::hr(),
       shiny::checkboxInput(ns("simulate"),
                            "Simulate (check the audio, cut nothing)"),
+      hint("Shows what would be cut, without writing any audio."),
       shiny::checkboxInput(ns("replace"),
                            "Replace an existing clip_manifest.csv"),
+      hint("Overwrites the manifest of an earlier cut in this round."),
       shiny::actionButton(ns("cut"), "Cut clips")
     ),
     shiny::mainPanel(
@@ -649,6 +716,10 @@ sampling_server <- function(id, detections, selection_dir, output_dir,
     args_r <- shiny::reactiveVal(NULL)
     notas <- shiny::reactiveVal(character())
     status <- shiny::reactiveVal(NULL)
+    shiny::observeEvent(input$mode, {
+      shiny::updateNumericInput(session, "threshold",
+                                label = threshold_label(input$mode))
+    })
     cortes <- shiny::reactiveVal(0L)
 
     shiny::observeEvent(input$draw, {
@@ -740,11 +811,17 @@ export_ui <- function(id, output_dir) {
       width = 4,
       shiny::selectInput(ns("occasion_unit"), "Occasion",
                          c("file", "minute")),
+      hint("The unit of time over which a species counts as detected or",
+           "not at a site. Use the one of the clip extraction."),
       shiny::numericInput(ns("min_confidence"), "Minimum score", 0.1,
                           min = 0, max = 1, step = 0.05),
+      hint("Predictions below this score are left out. Use the minimum",
+           "score of the BirdNET run or higher."),
       shiny::textInput(ns("export_dir"), "Export folder",
                        file.path(output_dir, "occupancy")),
+      hint("Where the occupancy tables are written."),
       shiny::checkboxInput(ns("overwrite"), "Overwrite an existing export"),
+      hint("Replaces an earlier export in this folder."),
       shiny::actionButton(ns("export"), "Export", class = "btn-primary"),
       shiny::helpText("Use the occasion of the clip extraction. The score",
                       "calibration is not in the app yet: call",

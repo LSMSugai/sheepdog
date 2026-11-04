@@ -29,7 +29,8 @@ install.packages(c("shiny", "av"))
 
 For a whole validation round, give `run_app()` the folder of the BirdNET
 selection tables and the folder of the round. The app opens on the
-Sampling tab, followed by the Review and Export tabs:
+Intro tab, a figure of what each sampling mode, occasion and stratum
+picks, followed by the Sampling, Review and Export tabs:
 
 ```{r}
 library(sheepdog)
