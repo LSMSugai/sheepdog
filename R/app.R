@@ -74,6 +74,11 @@
 #'   `recordings` CSV when it is a path, or else to
 #'   `<output_dir>/recordings.csv`; the list is used as `recordings`.
 #'   Can also be chosen in the app (Intro > Audio panel).
+#' @param site_pattern Optional regular expression with one capture group
+#'   that takes the site from the file names, when the recordings or the
+#'   selection tables of several sites share a folder (see
+#'   [list_recordings()] and [read_selection_tables()]). Can also be set in
+#'   the Audio panel.
 #' @param classifier Label of the classifier, recorded in
 #'   `extraction_info.csv` and `schema.json`.
 #' @param launch.browser Open the app in the browser? Passed to
@@ -97,7 +102,8 @@
 run_app <- function(manifest = NULL, clips_dir = NULL, verdicts_file = NULL,
                     reviewer = NULL, max_freq = 12, selection_dir = NULL,
                     output_dir = NULL, recordings = NULL, audio_dir = NULL,
-                    classifier = NULL, launch.browser = interactive(), ...) {
+                    site_pattern = NULL, classifier = NULL,
+                    launch.browser = interactive(), ...) {
   require_suggested("shiny", "to run the review app")
   require_suggested("av", "to draw the spectrograms")
   if (!is.null(manifest) && is.null(clips_dir) && is.null(output_dir)) {
@@ -112,7 +118,8 @@ run_app <- function(manifest = NULL, clips_dir = NULL, verdicts_file = NULL,
                   verdicts_file = verdicts_file, reviewer = reviewer,
                   max_freq = max_freq, selection_dir = selection_dir,
                   output_dir = output_dir, recordings = recordings,
-                  audio_dir = audio_dir, classifier = classifier)
+                  audio_dir = audio_dir, site_pattern = site_pattern,
+                  classifier = classifier)
   load_app_state(st)
   if (!is.null(st$fila)) {
     message(nrow(st$fila), " clip(s) to review; verdicts written to ",
@@ -359,6 +366,31 @@ spectrogram_colours <- function(palette = "Gray") {
 # Teclas do app
 review_keys <- c(p = "positive", n = "negative", u = "uncertain")
 
+# Interface do app a partir do estado: so a revisao, ou as abas Intro,
+# Sampling, Review e Export (as duas do meio pedem as pastas quando faltam)
+app_ui <- function(st) {
+  titulo <- paste0("sheepdog", if (!is.null(st$reviewer))
+    paste0(" (", st$reviewer, ")"))
+  if (st$review_only) {
+    return(shiny::fluidPage(title = "sheepdog review",
+                            shiny::titlePanel(paste0(titulo,
+                                                     ": clip review")),
+                            review_ui("review", st$max_freq)))
+  }
+  pronto <- app_ready(st)
+  shiny::navbarPage(
+    titulo, id = "tabs", selected = if (is.null(st$fila)) "Intro" else
+      "Review",
+    shiny::tabPanel("Intro", intro_ui(st)),
+    shiny::tabPanel("Sampling", if (pronto) {
+      sampling_ui("sampling", st$detections, st$audio_dir)
+    } else needs_folders_ui()),
+    shiny::tabPanel("Review", review_ui("review", st$max_freq)),
+    shiny::tabPanel("Export", if (pronto) {
+      export_ui("export", st$output_dir)
+    } else needs_folders_ui()))
+}
+
 # O app: interface e servidor. Sem `detections`, so a aba de revisao
 review_app <- function(st) {
   recurso <- "sheepdog_clips"
@@ -371,28 +403,7 @@ review_app <- function(st) {
   }
   registrar_clipes()
   # a interface e montada a cada carga da pagina, a partir do estado
-  ui <- function(req) {
-    titulo <- paste0("sheepdog", if (!is.null(st$reviewer))
-      paste0(" (", st$reviewer, ")"))
-    if (st$review_only) {
-      return(shiny::fluidPage(title = "sheepdog review",
-                              shiny::titlePanel(paste0(titulo,
-                                                       ": clip review")),
-                              review_ui("review", st$max_freq)))
-    }
-    pronto <- app_ready(st)
-    shiny::navbarPage(
-      titulo, id = "tabs", selected = if (is.null(st$fila)) "Intro" else
-        "Review",
-      shiny::tabPanel("Intro", intro_ui(st)),
-      shiny::tabPanel("Sampling", if (pronto) {
-        sampling_ui("sampling", st$detections, st$audio_dir)
-      } else needs_folders_ui()),
-      shiny::tabPanel("Review", review_ui("review", st$max_freq)),
-      shiny::tabPanel("Export", if (pronto) {
-        export_ui("export", st$output_dir)
-      } else needs_folders_ui()))
-  }
+  ui <- function(req) app_ui(st)
   server <- function(input, output, session) {
     fila_r <- shiny::reactiveVal(st$fila)
     if (!st$review_only) {
@@ -402,7 +413,8 @@ review_app <- function(st) {
     if (!st$review_only && app_ready(st)) {
       output_dir <- st$output_dir
       cortes <- sampling_server("sampling", st$detections, st$selection_dir,
-                                output_dir, st$recordings, st$classifier)
+                                output_dir, st$recordings, st$classifier,
+                                audio_listed = st$audio_dir)
       # clipes recem-cortados vao para a fila da revisao
       shiny::observeEvent(cortes(), {
         q <- tryCatch(
@@ -656,7 +668,6 @@ review_server <- function(id, fila, verdicts_file, reviewer, recurso = "",
   })
 }
 
-# Presets de estratos de select_clips()
 # Aba de abertura: a figura que resume os modos de amostragem
 intro_ui <- function(st) {
   shiny::navlistPanel(
@@ -689,6 +700,7 @@ threshold_label <- function(mode) {
          ")")
 }
 
+# Presets de estratos de select_clips()
 strata_presets <- c("night_hour", "night", "hour", "week", "month",
                     "site_species")
 
@@ -832,8 +844,11 @@ with_notes <- function(expr) {
 # arquivo, em `audio_dir` (com subpastas). `found` liga cada caminho ausente
 # ao achado; nomes repetidos em `audio_dir` ficam de fora (ambiguos).
 # `remap` e o par de pastas quando um so explica todos os achados.
+# `files`: os arquivos de `audio_dir`, quando ja listados (ex. pela aba Audio
+# panel), para nao varrer a pasta de novo a cada sorteio.
 locate_audio <- function(paths, audio_dir = NULL,
-                         audio_pattern = "\\.(wav|flac|mp3)$") {
+                         audio_pattern = "\\.(wav|flac|mp3)$",
+                         files = NULL) {
   paths <- unique(paths[!is.na(paths) & nzchar(paths)])
   ausentes <- paths[!file.exists(paths)]
   achados <- character()
@@ -841,9 +856,9 @@ locate_audio <- function(paths, audio_dir = NULL,
   if (!is.null(audio_dir)) audio_dir <- sub("/+$", "", path.expand(audio_dir))
   if (length(ausentes) > 0 && !is.null(audio_dir) && nzchar(audio_dir) &&
       dir.exists(audio_dir)) {
-    arquivos <- list.files(audio_dir, audio_pattern,
-                           recursive = TRUE, full.names = TRUE,
-                           ignore.case = TRUE)
+    arquivos <- if (!is.null(files)) files else
+      list.files(audio_dir, audio_pattern, recursive = TRUE,
+                 full.names = TRUE, ignore.case = TRUE)
     arquivos <- str_replace_all(arquivos, fixed("\\"), "/")
     nomes <- basename(arquivos)
     unicos <- !(duplicated(nomes) | duplicated(nomes, fromLast = TRUE))
@@ -860,6 +875,22 @@ locate_audio <- function(paths, audio_dir = NULL,
   }
   list(n = length(paths), missing = ausentes, found = achados,
        remap = remap)
+}
+
+# Os arquivos ja listados de `listed_dir` servem para `audio_dir`? So quando
+# as duas pastas sao a mesma
+listed_files <- function(audio_dir, listed_dir, recordings) {
+  mesma <- function(d) {
+    if (is.null(d) || !nzchar(d) || !dir.exists(path.expand(d))) {
+      return(NA_character_)
+    }
+    normalizePath(path.expand(d), winslash = "/")
+  }
+  a <- mesma(audio_dir)
+  if (is.null(recordings) || is.na(a) || !identical(a, mesma(listed_dir))) {
+    return(NULL)
+  }
+  as.character(recordings$source_audio)
 }
 
 # Aviso, apos o sorteio, sobre as gravacoes achadas ou ausentes
@@ -906,7 +937,8 @@ relocate_dialog <- function(chk, audio_dir, ns) {
 
 # Devolve um reativo que muda a cada corte (o app recarrega a fila)
 sampling_server <- function(id, detections, selection_dir, output_dir,
-                            recordings = NULL, classifier = NULL) {
+                            recordings = NULL, classifier = NULL,
+                            audio_listed = NULL) {
   shiny::moduleServer(id, function(input, output, session) {
     selecao <- shiny::reactiveVal(NULL)
     args_r <- shiny::reactiveVal(NULL)
@@ -944,7 +976,9 @@ sampling_server <- function(id, detections, selection_dir, output_dir,
       realocadas(NULL)
       audio(NULL)
       if (!is.null(r$value) && nrow(r$value) > 0) {
-        chk <- locate_audio(r$value$source_audio, input$audio_dir)
+        chk <- locate_audio(r$value$source_audio, input$audio_dir,
+                            files = listed_files(input$audio_dir,
+                                                 audio_listed, recordings))
         audio(chk)
         r$notes <- c(r$notes, audio_note(chk, input$audio_dir))
         if (length(chk$found) > 0) {

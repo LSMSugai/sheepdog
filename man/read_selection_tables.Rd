@@ -7,7 +7,8 @@
 read_selection_tables(
   data_dir,
   table_pattern = "^BirdNET_SelectionTable\\\\.txt$",
-  per_audio_pattern = "\\\\.BirdNET\\\\.selection\\\\.table\\\\.txt$"
+  per_audio_pattern = "\\\\.BirdNET\\\\.selection\\\\.table\\\\.txt$",
+  site_pattern = NULL
 )
 }
 \arguments{
@@ -18,6 +19,13 @@ tables.}
 
 \item{per_audio_pattern}{Regular expression for the file names of
 per-audio tables. \code{NULL} reads only combined tables.}
+
+\item{site_pattern}{Optional regular expression with one capture group
+that takes the site from the name of the audio file in \verb{Begin Path},
+instead of from the folder of the table. For example,
+\code{"^[^_]+_([^_]+)_"} reads \code{Campus01} from
+\code{Campinas_Campus01_20261003_074339.flac}. Use the same pattern in
+\code{\link[=list_recordings]{list_recordings()}}.}
 }
 \value{
 A tibble with one row per prediction, the column \code{site} first,
@@ -50,7 +58,10 @@ the column sheepdog uses to place a detection.
 Run BirdNET once per site, so that the tables of each site end up in
 their own folder: per-audio tables in subfolders of a site folder would be
 read as separate sites. A folder that holds a combined table is read from
-it alone, and its per-audio tables are ignored, with a message.
+it alone, and its per-audio tables are ignored, with a message. When the
+tables of several sites share a folder, \code{site_pattern} takes the site
+from the name of the audio file of each prediction (\verb{Begin Path})
+instead.
 
 Column names are standardised to lower case without units or punctuation,
 e.g. \verb{Begin Time (s)} becomes \code{begin_time} and \verb{File Offset (s)} becomes

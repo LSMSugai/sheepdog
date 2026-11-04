@@ -14,6 +14,7 @@ run_app(
   output_dir = NULL,
   recordings = NULL,
   audio_dir = NULL,
+  site_pattern = NULL,
   classifier = NULL,
   launch.browser = interactive(),
   ...
@@ -58,6 +59,12 @@ Every recording is listed with \code{\link[=list_recordings]{list_recordings()}}
 \code{recordings} CSV when it is a path, or else to
 \verb{<output_dir>/recordings.csv}; the list is used as \code{recordings}.
 Can also be chosen in the app (Intro > Audio panel).}
+
+\item{site_pattern}{Optional regular expression with one capture group
+that takes the site from the file names, when the recordings or the
+selection tables of several sites share a folder (see
+\code{\link[=list_recordings]{list_recordings()}} and \code{\link[=read_selection_tables]{read_selection_tables()}}). Can also be set in
+the Audio panel.}
 
 \item{classifier}{Label of the classifier, recorded in
 \code{extraction_info.csv} and \code{schema.json}.}
