@@ -86,7 +86,7 @@ workflow. The tabs depend on the arguments:
 \item \strong{Intro}: a graphical abstract of the sampling designs and an Audio
 panel to choose the audio folder, the BirdNET results and the
 validation folder (with a dialog of the system), with a summary of the
-recordings per site and day. Folders given to \code{run_app()} are
+recordings per site and night. Folders given to \code{run_app()} are
 confirmed when the app opens. Without them, the app opens on this tab.
 \item \strong{Sampling} (with \code{selection_dir} and \code{output_dir}): a form for the
 sampling design of \code{\link[=select_clips]{select_clips()}}. \emph{Draw} shows the clips per site

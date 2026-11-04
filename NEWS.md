@@ -1,12 +1,15 @@
 # sheepdog (development version)
 
+- `select_clips()`: `"random_detections"` now says so when every candidate
+  occasion was taken (all `inclusion_prob` equal to 1), which is a census
+  and not a random draw.
 - `run_app()`: the app opens on a new Intro tab with a graphical abstract
   of the sampling designs and an Audio panel, where the audio folder (new
   `audio_dir` argument, listed into `recordings.csv`), the BirdNET results
   and the validation folder can be chosen with the system's folder dialog.
   Folders given to `run_app()` are confirmed when the app opens, and
   `run_app()` can be called without arguments. The panel shows the
-  recordings per site and day, coloured by the share of hours with
+  recordings per site and night, coloured by the share of hours with
   predictions of the chosen species, with the number of predictions on
   hover.
 - `run_app()`: every field has a short help note; the threshold is marked

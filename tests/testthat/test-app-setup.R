@@ -8,6 +8,22 @@ setup_audio <- function(d) {
   invisible(d)
 }
 
+test_that("recording_summary() puts the recordings after midnight in the night before", {
+  rec <- tibble::tibble(
+    site = "ARA",
+    source_audio = paste0("/a/ARA01_", c("20211001_190000", "20211001_220000",
+                                         "20211002_010000", "20211002_190000"),
+                          ".wav"))
+  det <- tibble::tibble(site = "ARA",
+                        begin_path = "/a/ARA01_20211002_010000.wav")
+  tab <- recording_summary(rec, det)
+  expect_identical(tab$night, c("20211001", "20211002"))
+  expect_identical(tab$n_recordings, c(3L, 1L))
+  expect_identical(tab$hours_with_detections, c(1L, 0L))
+  expect_equal(tab$prop_hours, c(1 / 3, 0))
+  expect_match(summary_svg(tab), "ARA, night of 2021-10-01")
+})
+
 test_that("recording_summary() counts recordings, hours and predictions", {
   aud <- setup_audio(withr::local_tempdir())
   rec <- suppressMessages(list_recordings(aud))
@@ -17,7 +33,7 @@ test_that("recording_summary() counts recordings, hours and predictions", {
                                          "ARA01_20211002_190000.wav")))
   tab <- recording_summary(rec, det)
   expect_identical(nrow(tab), 3L)
-  a1 <- tab[tab$site == "ARA" & tab$recording_date == "20211001", ]
+  a1 <- tab[tab$site == "ARA" & tab$night == "20211001", ]
   expect_identical(a1$n_recordings, 2L)
   expect_identical(a1$hours_recorded, 2L)
   expect_identical(a1$hours_with_detections, 1L)

@@ -122,6 +122,19 @@ test_that("select_clips() leaves the global RNG untouched", {
   expect_identical(.Random.seed, antes)
 })
 
+test_that("random_detections says when the draw is a census", {
+  pred <- suppressMessages(
+    read_selection_tables(file.path(sim_root(), "tabelas")))
+  msgs <- capture_messages(
+    select_clips(pred, "random_detections", threshold = 0.5, n_top = 1e6,
+                 strata = "night_hour"))
+  expect_true(any(grepl("census", msgs)))
+  msgs <- capture_messages(
+    select_clips(pred, "random_detections", threshold = 0.5, n_top = 1,
+                 strata = "night"))
+  expect_false(any(grepl("census", msgs)))
+})
+
 test_that("random_detections needs a threshold", {
   pred <- suppressMessages(
     read_selection_tables(file.path(sim_root(), "tabelas")))

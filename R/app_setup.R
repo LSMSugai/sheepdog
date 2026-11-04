@@ -219,7 +219,7 @@ setup_ui <- function(id, st) {
                             class = "btn-primary")),
       shiny::column(5, shiny::h4("Loaded"), shiny::uiOutput(ns("status")))),
     shiny::hr(),
-    shiny::h4("Recordings per site and day"),
+    shiny::h4("Recordings per site and night"),
     shiny::selectizeInput(
       ns("species"), "Species",
       sort(unique(as.character(st$detections$species_code))),
@@ -229,9 +229,10 @@ setup_ui <- function(id, st) {
       "Predictions of these species only, at any score. Leave empty for",
       "all species.")),
     hint(paste(
-      "Square size: number of recordings that day. Colour: share of the",
-      "hours recorded that day with at least one prediction of the chosen",
-      "species. Hover a square for the number of predictions.")),
+      "Square size: number of recordings that night. Colour: share of the",
+      "hours recorded that night with at least one prediction of the chosen",
+      "species. Recordings before noon belong to the night before. Hover a",
+      "square for the number of predictions.")),
     shiny::uiOutput(ns("summary")),
     summary_tooltip())
 }
@@ -404,14 +405,15 @@ confirm_folders <- function(st, input, session) {
 }
 
 # ---------------------------------------------------------------------------
-# Resumo das gravacoes: local x dia
+# Resumo das gravacoes: local x noite
 
-# Uma linha por local x dia: gravacoes, horas gravadas, horas com alguma
-# predicao (qualquer score) e o total de predicoes. Sem a lista de
+# Uma linha por local x noite: gravacoes, horas gravadas, horas com alguma
+# predicao (qualquer score) e o total de predicoes. Antes de `dawn_hour`, a
+# gravacao e da noite anterior, como em score_detections(). Sem a lista de
 # gravacoes, usa os arquivos de todas as predicoes. `species` limita so as
 # contagens de predicoes, nao as gravacoes.
 recording_summary <- function(recordings = NULL, detections = NULL,
-                              species = NULL) {
+                              species = NULL, dawn_hour = 12) {
   de_det <- is.null(recordings)
   if (de_det) {
     if (is.null(detections) || nrow(detections) == 0) return(NULL)
@@ -427,30 +429,33 @@ recording_summary <- function(recordings = NULL, detections = NULL,
                 arquivo = basename(remap_path(recordings$source_audio)))
   rec <- bind_cols(rec, parse_date_hour(rec$arquivo)) |>
     filter(!is.na(recording_date)) |>
-    distinct(arquivo, .keep_all = TRUE)
+    distinct(arquivo, .keep_all = TRUE) |>
+    mutate(night = night_of(recording_date, recording_hour, dawn_hour))
   if (nrow(rec) == 0) return(NULL)
-  dia <- rec |>
-    group_by(site, recording_date) |>
+  noite <- rec |>
+    group_by(site, night) |>
     summarise(n_recordings = n(),
-              hours_recorded = n_distinct(recording_hour), .groups = "drop")
+              hours_recorded = n_distinct(recording_date, recording_hour),
+              .groups = "drop")
   if (!is.null(detections) && nrow(detections) > 0) {
     det <- count(tibble(arquivo = basename(remap_path(detections$begin_path))),
                  arquivo, name = "n_det")
     horas <- inner_join(rec, det, by = "arquivo") |>
-      group_by(site, recording_date) |>
+      group_by(site, night) |>
       summarise(n_detections = sum(n_det),
-                hours_with_detections = n_distinct(recording_hour),
+                hours_with_detections = n_distinct(recording_date,
+                                                   recording_hour),
                 .groups = "drop")
-    dia <- left_join(dia, horas, by = c("site", "recording_date")) |>
+    noite <- left_join(noite, horas, by = c("site", "night")) |>
       mutate(n_detections = replace_na(n_detections, 0L),
              hours_with_detections = replace_na(hours_with_detections, 0L))
   } else {
-    dia$n_detections <- NA_integer_
-    dia$hours_with_detections <- NA_integer_
+    noite$n_detections <- NA_integer_
+    noite$hours_with_detections <- NA_integer_
   }
-  dia$prop_hours <- dia$hours_with_detections / dia$hours_recorded
-  attr(dia, "from_detections") <- de_det
-  dia
+  noite$prop_hours <- noite$hours_with_detections / noite$hours_recorded
+  attr(noite, "from_detections") <- de_det
+  noite
 }
 
 # Cor de uma proporcao (0 a 1) numa escala sequencial
@@ -481,17 +486,17 @@ summary_svg <- function(tab, species = NULL) {
     gsub("\n", "&#10;", x, fixed = TRUE)
   }
   sites <- sort(unique(tab$site))
-  dias <- sort(unique(tab$recording_date))
+  noites <- sort(unique(tab$night))
   cel <- 34
   rot <- max(nchar(sites))
   esq <- 96
   topo <- 20 + min(rot, 30) * 5.2
   larg <- max(esq + length(sites) * cel + 20, 380)
-  alt_grade <- length(dias) * cel
+  alt_grade <- length(noites) * cel
   alt <- topo + alt_grade + 120
   max_n <- max(tab$n_recordings)
   lado <- function(n) 8 + (cel - 12) * sqrt(n / max_n)
-  fmt_dia <- function(d) paste(substr(d, 1, 4), substr(d, 5, 6),
+  fmt_noite <- function(d) paste(substr(d, 1, 4), substr(d, 5, 6),
                                substr(d, 7, 8), sep = "-")
   s <- sprintf(paste0('<svg xmlns="http://www.w3.org/2000/svg" width="%d" ',
                       'height="%d" font-family="sans-serif" font-size="12">'),
@@ -502,20 +507,20 @@ summary_svg <- function(tab, species = NULL) {
                                   'rotate(-50)" fill="#333">%s</text>'),
                            x + 4, topo - 6, esc(sites[i])))
   }
-  for (j in seq_along(dias)) {
+  for (j in seq_along(noites)) {
     y <- topo + (j - 0.5) * cel
     s <- paste0(s, sprintf('<text x="%d" y="%.1f" text-anchor="end" fill="#333">%s</text>',
-                           esq - 8, y + 4, fmt_dia(dias[j])))
+                           esq - 8, y + 4, fmt_noite(noites[j])))
   }
   for (k in seq_len(nrow(tab))) {
     r <- tab[k, ]
     i <- match(r$site, sites)
-    j <- match(r$recording_date, dias)
+    j <- match(r$night, noites)
     cx <- esq + (i - 0.5) * cel
     cy <- topo + (j - 0.5) * cel
     l <- lado(r$n_recordings)
     dica <- paste0(
-      r$site, ", ", fmt_dia(r$recording_date), "\n",
+      r$site, ", night of ", fmt_noite(r$night), "\n",
       r$n_recordings, " recording(s), ", r$hours_recorded, " hour(s)",
       if (!is.na(r$n_detections)) paste0(
         "\n", r$hours_with_detections, " of ", r$hours_recorded,

@@ -6,7 +6,7 @@
 #' * **Intro**: a graphical abstract of the sampling designs and an Audio
 #'   panel to choose the audio folder, the BirdNET results and the
 #'   validation folder (with a dialog of the system), with a summary of the
-#'   recordings per site and day. Folders given to `run_app()` are
+#'   recordings per site and night. Folders given to `run_app()` are
 #'   confirmed when the app opens. Without them, the app opens on this tab.
 #' * **Sampling** (with `selection_dir` and `output_dir`): a form for the
 #'   sampling design of [select_clips()]. *Draw* shows the clips per site
@@ -318,8 +318,10 @@ plot_spectrogram <- function(path, max_freq = NULL, fft = 1024L,
   v <- pmin(pmax(v, 0), 1)
   op <- graphics::par(mar = c(4, 4, 0.5, 0.5))
   on.exit(graphics::par(op))
+  # o topo do eixo e o pedido, nao a ultima faixa de frequencia do FFT
+  topo <- if (is.null(max_freq)) max(freq) else min(max_freq, max(freq))
   graphics::image(attr(x, "time"), freq[manter], v, zlim = c(0, 1),
-                  col = spectrogram_colours(palette),
+                  ylim = c(0, topo), col = spectrogram_colours(palette),
                   xlab = "Time (s)", ylab = "Frequency (kHz)",
                   useRaster = TRUE)
   # regiao do grafico e eixos, para a linha que acompanha o audio
@@ -791,11 +793,11 @@ sampling_ui <- function(id, detections, audio_dir = NULL) {
     shiny::mainPanel(
       width = 8,
       shiny::uiOutput(ns("notes")),
-      shiny::h4("Clips per site and species"),
+      shiny::uiOutput(ns("counts_title")),
       shiny::tableOutput(ns("counts")),
-      shiny::h4("Inclusion probability per species"),
+      shiny::uiOutput(ns("inclusion_title")),
       shiny::tableOutput(ns("inclusion")),
-      shiny::h4("Cutting"),
+      shiny::uiOutput(ns("cut_title")),
       shiny::tableOutput(ns("cut_status"))
     )
   )
@@ -1051,6 +1053,20 @@ sampling_server <- function(id, detections, selection_dir, output_dir,
       shiny::div(class = "alert alert-info",
                  lapply(n, function(x) shiny::p(x)))
     })
+    # os titulos so aparecem com a tabela
+    output$counts_title <- shiny::renderUI({
+      shiny::req(selecao(), nrow(selecao()) > 0)
+      shiny::h4("Clips per site and species")
+    })
+    output$inclusion_title <- shiny::renderUI({
+      sel <- selecao()
+      shiny::req(sel, nrow(sel) > 0, any(!is.na(sel$inclusion_prob)))
+      shiny::h4("Inclusion probability per species")
+    })
+    output$cut_title <- shiny::renderUI({
+      shiny::req(status())
+      shiny::h4("Cutting")
+    })
     output$counts <- shiny::renderTable({
       sel <- selecao()
       shiny::req(sel, nrow(sel) > 0)
@@ -1095,8 +1111,7 @@ export_ui <- function(id, output_dir) {
       shiny::checkboxInput(ns("overwrite"), "Overwrite an existing export"),
       hint("Replaces an earlier export in this folder."),
       shiny::actionButton(ns("export"), "Export", class = "btn-primary"),
-      shiny::helpText("Use the occasion of the clip extraction. The score",
-                      "calibration is not in the app yet: call",
+      shiny::helpText("The score calibration is not in the app yet: call",
                       "export_occupancy_data() with `fit` for it.")
     ),
     shiny::mainPanel(
