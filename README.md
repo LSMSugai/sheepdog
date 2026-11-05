@@ -175,8 +175,9 @@ idempotent: an interrupted run resumes where it stopped.
 
 ## Calibration
 
-Converting BirdNET confidence scores into probabilities is recommended by the
-BirdNET authors ([Wood & Kahl 2024](https://doi.org/10.1007/s10336-024-02144-5));
+Converting BirdNET confidence scores into probabilities
+ ([Wood & Kahl 2024](https://doi.org/10.1007/s10336-024-02144-5)) is often used to
+ inform thresholding;
 calibration by logistic regression on logit(score) is applied, for instance,
 by [Owens et al. (2026)](https://doi.org/10.64898/2026.06.01.729442).
 `calibrate()` extends that approach with a hierarchical multi-species
