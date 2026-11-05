@@ -89,3 +89,30 @@ test_that("calibration_quality() checks its input", {
                                    slope_range = c(2, 1)), "slope_range")
   expect_error(calibration_quality(d, tp ~ nope), "all the folds")
 })
+
+test_that("a fold that fails is left out with a warning", {
+  d <- quality_data()
+  # no treino da dobra 1 `z` tem um nivel so, e o glm falha
+  d$z <- factor(ifelse(calibration_folds(d) == 1L, "b", "a"))
+  expect_warning(q <- calibration_quality(d, tp ~ logit_conf + z),
+                 "failed in 1 of 5 folds")
+  expect_lt(sum(q$n), nrow(d))
+})
+
+test_that("a group absent from the training folds gets the overall rate", {
+  d <- quality_data()
+  d$night <- rep(1:30, length.out = nrow(d))
+  q <- calibration_quality(d, tp ~ logit_conf * species, fold_group = "night",
+                           by = "night")
+  expect_equal(nrow(q), 30L)
+  expect_false(anyNA(q$logloss_null))
+})
+
+test_that("the calibration intercept and missing groups are checked", {
+  d <- quality_data()
+  q <- calibration_quality(d, tp ~ logit_conf, intercept_max = 0)
+  expect_match(q$reason[1], "intercept out of range")
+  d$grupo <- NA_character_
+  expect_error(calibration_quality(d, tp ~ logit_conf, by = "grupo"),
+               "no missing")
+})
