@@ -914,8 +914,10 @@ plot_calibration <- function(fit, validations, min_confidence = 0.1,
 #' @param effort_n,effort_reps Training sizes and repetitions of the
 #'   effort curve.
 #'
-#' @return A list with `comparison`, `fit`, `effort` (or `NULL`), `scored`,
-#'   `thresholds` and `history`, invisibly.
+#' @return A list with `comparison`, `quality` (from
+#'   [calibration_quality()], by species, or by site with one species, also
+#'   written to `calibration_quality.csv`), `fit`, `effort` (or `NULL`),
+#'   `scored`, `thresholds` and `history`, invisibly.
 #' @export
 calibrate <- function(validation_files, prediction_tables, output_dir,
                       site_map = NULL, min_confidence = 0.1, p_min = 0.95,
@@ -954,6 +956,25 @@ calibrate <- function(validation_files, prediction_tables, output_dir,
   }
   melhor <- select_calibration_model(cv, select, k_folds)
   message("Selected model (", select, "): ", melhor)
+
+  qualidade <- tryCatch(
+    calibration_quality(val, modelos[[melhor]], k_folds, seed, fold_group,
+                        by = if (n_distinct(val$species) > 1L) "species"
+                             else "site"),
+    error = function(e) {
+      message("calibration_quality.csv was not written: ",
+              conditionMessage(e))
+      NULL
+    })
+  if (!is.null(qualidade)) {
+    write_csv(qualidade, file.path(output_dir, "calibration_quality.csv"))
+    fracos <- filter(qualidade, status == "poor")
+    if (nrow(fracos) > 0) {
+      message("Check these groups in calibration_quality.csv before using ",
+              "their probabilities: ",
+              paste(fracos[[1]], collapse = ", "), ".")
+    }
+  }
 
   if (engine == "brms") {
     prior_final <- if (is.function(prior)) prior(modelos[[melhor]], val) else prior
@@ -1028,7 +1049,7 @@ calibrate <- function(validation_files, prediction_tables, output_dir,
           "\nnightly_detection_history.csv is the input of the analyses; ",
           "the column 'detection' uses k = ", min_detections_night,
           "; detection_k1/k2/k3 give the sensitivity to the rule.")
-  invisible(list(comparison = cv, fit = fit_final, effort = esforco,
-                 scored = pontuadas, thresholds = limiares,
+  invisible(list(comparison = cv, quality = qualidade, fit = fit_final,
+                 effort = esforco, scored = pontuadas, thresholds = limiares,
                  history = historico))
 }

@@ -544,6 +544,7 @@ Before using calibrated probabilities, check that:
    the score, follow the observed precision, and rest on enough clips near
    `p_min`. `calibration_effort()` estimates how many clips per site x
    species are needed for a stable AUC.
+4. **The probabilities hold for each species.** See the next section.
 
 The calibration also assumes that, within a score level, the reviewed
 clips are representative of all the detections of that species at that
@@ -553,6 +554,49 @@ if the clips were chosen by another criterion related to correctness (for
 example, only clips that sounded clear, or only the nights of peak
 activity), or if the reviewed period differs from the scored one in noise
 or in species composition.
+
+## Checking the quality of P(TP) by species
+
+The measures above describe a model over all the clips. A logistic
+regression can still fit poorly for one species, and the mean AUC does not
+show it: the AUC rises when species differ in precision, and partial
+pooling lends a species with an uninformative score the curve of the
+others. `calibration_quality()` refits one model by cross-validation and
+scores the held-out predictions within each group. It compares the model
+with a null model, the share of true positives of the group in the training
+folds (`logloss_gain`), reports the AUC of the probabilities (`auc`) and of
+the raw score (`auc_score`) within the group, and the calibration intercept
+and slope. `calibrate()` writes this table to `calibration_quality.csv`.
+
+```{r, eval = has_lme4}
+quality <- calibration_quality(val, models$m4_species_x_site)
+quality |>
+  select(species, n_fp, auc, auc_score, logloss_gain, cal_slope, status) |>
+  mutate(across(where(is.numeric), \(x) round(x, 2)))
+```
+
+```{r, include = FALSE, eval = has_lme4}
+q_of <- function(col) round(quality[[col]][quality$species == "pse_pla"], 2)
+```
+
+The mean AUC of this model is `r if (has_lme4) auc_of("m4_species_x_site")`,
+but the score of `pse_pla` has an AUC of `r if (has_lme4) q_of("auc_score")`
+within the species: its probabilities reach an `auc` of
+`r if (has_lme4) q_of("auc")` through the site x species intercepts, not
+through the score. They mostly give the precision of each cell, and a
+threshold on the score would separate little. `status` marks such a group
+as `"poor"`, and `reason` says why. `by = c("site", "species")` gives the
+same table for each cell, which holds fewer clips, so more groups come out
+as `"insufficient"` (fewer than `min_class` clips of a verdict).
+
+The limits behind `status` (`auc_min`, `slope_range`, `intercept_max`) are
+screening values, to be set for each project. Discrimination is also
+measured over the scores that were reviewed: the `"top"` design concentrates
+the clips at high scores, and can give a low AUC even with a good classifier,
+so check `conf_min` and `conf_max` before blaming the classifier. A group
+marked `"poor"` needs more clips, ideally from `"random_detections"`, a
+different model, or a decision to leave it out of the analyses that use
+P(TP).
 
 ## One species, or one site
 

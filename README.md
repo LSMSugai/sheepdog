@@ -138,7 +138,7 @@ Each stage is also available as separate functions:
 | 1. Several reviewers | `assign_reviewers()`, `split_by_reviewer()`, `reviewer_agreement()` (Cohen's or Fleiss' kappa), `consensus_verdicts()` |
 | 1. After the review | `classify_review()`, `precision_by_bin()`, `suggest_thresholds()`, `plot_precision()`, `nightly_presence()`, `retraining_clips()`, `read_validation_tables()`, `review_support()` (cells, or bins, that still need review) |
 | 1. Retraining | `build_training_set()` (training folders for BirdNET-Analyzer), `exclude_training_clips()`, `training_nights()` |
-| 2. Calibration | `read_validations()`, `calibration_models()`, `calibration_folds()`, `compare_calibration_models()`, `select_calibration_model()`, `fit_calibration()`, `calibrated_thresholds()` (a threshold per site x species from the model), `calibration_effort()`, `score_detections()`, `detection_history()`, `summarise_history()` |
+| 2. Calibration | `read_validations()`, `calibration_models()`, `calibration_folds()`, `compare_calibration_models()`, `select_calibration_model()`, `fit_calibration()`, `calibration_quality()` (held-out quality of P(TP) by species), `calibrated_thresholds()` (a threshold per site x species from the model), `calibration_effort()`, `score_detections()`, `detection_history()`, `summarise_history()` |
 | 2. Bayesian calibration | `calibration_prior()`, `prior_predictive_calibration()`, `calibration_diagnostics()`, `calibration_ppc()`, `plot_calibration_ppc()`, `calibration_sensitivity()`, `plot_calibration_draws()`, `history_draws()` |
 | Occupancy data | `export_occupancy_data()` (schema `sheepdog-occupancy`), `occasion_draws()` (one detection data set per posterior draw) |
 | 3. Community matrices | `cell_status()`, `suggest_core_species()`, `community_matrices()`, `community_matrices_draws()` |
@@ -201,7 +201,10 @@ stratified k-fold cross-validation, which scores both discrimination (AUC)
 and the predicted probabilities (log-loss, Brier score, calibration
 intercept and slope); `select_calibration_model()` picks a model by the
 highest AUC or by the simplest model within one standard error of the lowest
-log-loss, leaving out singular fits.
+log-loss, leaving out singular fits. `calibration_quality()` then
+scores the held-out predictions of that model species by species, against a
+null model, because measures over all the clips can hide a species whose
+score says little.
 
 The selected model can also be fitted in a Bayesian framework with 'brms'
 (`engine = "brms"`), with an explicit prior, convergence diagnostics,
