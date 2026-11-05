@@ -25,8 +25,12 @@
 #'   AUC alone does not answer this: a model can rank clips well and still
 #'   give wrong probabilities.
 #'
-#' The limits behind `status` are screening values, not estimates: they are
-#' meant to direct attention to a group, and should be set for each project.
+#' The default limits behind `status` (`auc_min`, `slope_range`,
+#' `intercept_max` and `min_class`) are provisional screening values. They
+#' were chosen by judgement, and were neither derived from the literature
+#' nor validated on data, so a group near a limit is not a clear pass or
+#' fail. They are meant to direct attention to a group, and should be
+#' reviewed and set for each project. Read the measures along with `status`.
 #' A group marked `"poor"` needs more clips, a different model or a decision
 #' to leave the species out of the analyses that use P(TP).
 #'
