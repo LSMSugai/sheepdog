@@ -2,6 +2,15 @@
 
 Atualizada em 2026-10-22 (America/Campo_Grande).
 
+## Fase 2 (modelo conjunto score–ocupação): ler antes de trabalhar nela
+
+- `dev/dag/NOTAS-fase2.md` resume a leitura completa de Rhinehart et al.
+  (2022) e Ogawa et al. (2025) e as conclusões da sessão de 02–04/11/2026:
+  de onde vem cada parte do modelo, o problema da distribuição do máximo,
+  as lições de identificação e as decisões em aberto. O plano está em
+  `dev/roadmap-integration.md`; a DAG de referência é
+  `dev/dag/fase2_dag.png`.
+
 ## Publicação 3.1.0
 
 - As correções de `cell_status()` e os folds agrupados foram enviadas à
