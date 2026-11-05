@@ -1,5 +1,14 @@
 # sheepdog (development version)
 
+- `suggest_thresholds()` now chooses the cut with the precision weighted by
+  `1 / inclusion_prob` in the cells whose clips all have it, as
+  `"random_detections"` draws strata with unequal probabilities. `min_n`
+  applies there to Kish's effective sample size, given in `n_eff`, and
+  `precision_used` says which precision chose each cut. **Thresholds of
+  such cells can change**; `weighted = FALSE`, also in `post_validation()`
+  and `review_support()`, restores the previous choice. Cells that mix
+  clips with and without `inclusion_prob` use the unweighted precision,
+  with a warning. Tables without `inclusion_prob` are unchanged (#103).
 - New `calibration_quality()`: checks the calibrated probabilities by
   species (or by cell) on held-out clips, with the gain in log-loss over a
   null model, the AUC of the probabilities and of the raw score within the

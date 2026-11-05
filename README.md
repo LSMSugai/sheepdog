@@ -178,7 +178,7 @@ several sites share a folder, `site_pattern` reads it from the file name.
 The manifest records `occasion_id`, `n_detections_occasion` and
 `inclusion_prob` (the probability that the occasion was drawn), with which
 `post_validation()` also reports the precision weighted by
-`1 / inclusion_prob`. Every draw
+`1 / inclusion_prob` and uses it to suggest the thresholds. Every draw
 uses a fixed seed, so a rerun selects the same clips, and the cut is
 idempotent: an interrupted run resumes where it stopped.
 

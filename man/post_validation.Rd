@@ -14,7 +14,8 @@ post_validation(
   target_precision = 0.9,
   min_n = 15,
   verdicts_file = NULL,
-  reviewer = NULL
+  reviewer = NULL,
+  weighted = NULL
 )
 }
 \arguments{
@@ -46,6 +47,8 @@ instead of the subfolders of \code{review_dir}.}
 
 \item{reviewer}{With \code{verdicts_file}, optional reviewer(s) whose
 verdicts are used, as in \code{\link[=app_verdicts]{app_verdicts()}}.}
+
+\item{weighted}{Passed to \code{\link[=suggest_thresholds]{suggest_thresholds()}}.}
 }
 \value{
 A list with the tables \code{validation}, \code{precision}, \code{thresholds},
@@ -81,7 +84,9 @@ the precision and the thresholds.
 
 With \code{inclusion_prob} in the manifest (clips of \code{"random_detections"}),
 the precision tables also give the precision weighted by
-\code{1 / inclusion_prob}; see \code{\link[=precision_by_bin]{precision_by_bin()}}.
+\code{1 / inclusion_prob} (see \code{\link[=precision_by_bin]{precision_by_bin()}}), and that precision
+chooses the thresholds, unless \code{weighted = FALSE}; see
+\code{\link[=suggest_thresholds]{suggest_thresholds()}}.
 
 This is the function form of the v1.2.0 script \code{pos_validacao.R}.
 }
