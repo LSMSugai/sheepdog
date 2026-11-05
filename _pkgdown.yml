@@ -62,6 +62,7 @@ reference:
       - calibration_folds
       - compare_calibration_models
       - select_calibration_model
+      - calibration_quality
       - fit_calibration
       - calibration_effort
       - score_detections
