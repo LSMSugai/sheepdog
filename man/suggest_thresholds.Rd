@@ -9,7 +9,8 @@ suggest_thresholds(
   target_precision = 0.9,
   min_n = 15,
   by = NULL,
-  weighted = NULL
+  weighted = NULL,
+  sustained = FALSE
 )
 }
 \arguments{
@@ -31,6 +32,9 @@ unweighted one elsewhere. \code{TRUE}: always the weighted one; cells with
 clips without \code{inclusion_prob} get no threshold, with a warning, and
 it is an error if no clip has it. \code{FALSE}: always the unweighted one,
 and \code{n_support} for \code{min_n}.}
+
+\item{sustained}{Must the target also hold at every higher cut with at
+least \code{min_n} clips? See Sustained target.}
 }
 \value{
 A tibble with \code{site}, \code{species_folder}, the \code{by} columns,
@@ -49,6 +53,16 @@ precision among the reviewed clips with confidence >= \code{c} reaches
 observed confidences rounded to two decimals.
 }
 \details{
+\strong{Sustained target.} With \code{sustained = TRUE}, the target must also hold
+at every higher cut with at least \code{min_n} clips, the rule of
+\code{\link[=calibrated_thresholds]{calibrated_thresholds()}}. This is not the default: the curve of the model
+is smooth, while the empirical precision of a high cut rests on few clips,
+so a cut can fail by chance, and the failure of the highest supported cut
+leaves the cell without a threshold. In a simulation with 300 clips per
+cell, the share of cells without a threshold rose from 0.09 to 0.24, and
+the true precision of the cuts from 0.888 to 0.896
+(\code{dev/sustained-threshold-rule.R}).
+
 The precision is computed from the reviewed clips of each cell alone, so
 it is reliable only when the clips were drawn at random within the cell
 and are numerous. \code{\link[=calibrated_thresholds]{calibrated_thresholds()}} derives the thresholds from

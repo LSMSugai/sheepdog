@@ -68,6 +68,7 @@ reference:
       - calibration_effort
       - score_detections
       - calibrated_thresholds
+      - compare_thresholds
       - detection_history
       - summarise_history
       - plot_calibration
