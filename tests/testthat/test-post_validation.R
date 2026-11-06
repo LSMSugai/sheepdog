@@ -238,3 +238,23 @@ test_that("suggest_thresholds() copes with a top score that rounds up", {
   thr <- suggest_thresholds(v, min_n = 5)
   expect_equal(thr$threshold, 0.8)
 })
+
+test_that("`sustained` needs the target at every supported higher cut", {
+  # acima de 0,5 a precisao acumulada cai abaixo do alvo em 0,6 e volta em 0,7
+  v <- tibble::tibble(
+    site = "A", species_folder = "Sp",
+    confidence = rep(c(0.5, 0.6, 0.7), c(30, 10, 20)),
+    verdict = c(rep("positive", 30), rep("negative", 10), rep("positive", 20)))
+  # cortes: 0,5 -> 50/60 = 0,83; 0,6 -> 20/30 = 0,67; 0,7 -> 1
+  expect_equal(suggest_thresholds(v, target_precision = 0.8, min_n = 5,
+                                  sustained = TRUE)$threshold, 0.7)
+  expect_equal(suggest_thresholds(v, target_precision = 0.8,
+                                  min_n = 5)$threshold, 0.5)
+  # um falso positivo no topo, sem apoio, nao tira o limiar
+  topo <- tibble::tibble(
+    site = "A", species_folder = "Sp",
+    confidence = c(rep(0.5, 30), 0.9),
+    verdict = c(rep("positive", 30), "negative"))
+  expect_equal(suggest_thresholds(topo, target_precision = 0.9, min_n = 5,
+                                  sustained = TRUE)$threshold, 0.5)
+})

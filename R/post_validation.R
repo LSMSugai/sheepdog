@@ -163,6 +163,16 @@ precision_by_bin <- function(validation, bins = seq(0.1, 1, by = 0.1),
 #' `target_precision`, with at least `min_n` clips. Candidate cuts are the
 #' observed confidences rounded to two decimals.
 #'
+#' **Sustained target.** With `sustained = TRUE`, the target must also hold
+#' at every higher cut with at least `min_n` clips, the rule of
+#' [calibrated_thresholds()]. This is not the default: the curve of the model
+#' is smooth, while the empirical precision of a high cut rests on few clips,
+#' so a cut can fail by chance, and the failure of the highest supported cut
+#' leaves the cell without a threshold. In a simulation with 300 clips per
+#' cell, the share of cells without a threshold rose from 0.09 to 0.24, and
+#' the true precision of the cuts from 0.888 to 0.896
+#' (`dev/sustained-threshold-rule.R`).
+#'
 #' The precision is computed from the reviewed clips of each cell alone, so
 #' it is reliable only when the clips were drawn at random within the cell
 #' and are numerous. [calibrated_thresholds()] derives the thresholds from
@@ -194,6 +204,8 @@ precision_by_bin <- function(validation, bins = seq(0.1, 1, by = 0.1),
 #'   clips without `inclusion_prob` get no threshold, with a warning, and
 #'   it is an error if no clip has it. `FALSE`: always the unweighted one,
 #'   and `n_support` for `min_n`.
+#' @param sustained Must the target also hold at every higher cut with at
+#'   least `min_n` clips? See Sustained target.
 #'
 #' @return A tibble with `site`, `species_folder`, the `by` columns,
 #'   `threshold`, `n_support`, `precision_at_threshold` (unweighted; `NA`
@@ -206,7 +218,8 @@ precision_by_bin <- function(validation, bins = seq(0.1, 1, by = 0.1),
 #'   model.
 #' @export
 suggest_thresholds <- function(validation, target_precision = 0.90,
-                               min_n = 15, by = NULL, weighted = NULL) {
+                               min_n = 15, by = NULL, weighted = NULL,
+                               sustained = FALSE) {
   check_by(validation, by)
   if (!is.null(weighted) && !(isTRUE(weighted) || isFALSE(weighted))) {
     stop("`weighted` must be NULL, TRUE or FALSE.", call. = FALSE)
@@ -244,7 +257,7 @@ suggest_thresholds <- function(validation, target_precision = 0.90,
   }
   celulas |>
     group_modify(~ threshold_for(.x, target_precision, min_n, pesos,
-                                 weighted)) |>
+                                 weighted, sustained)) |>
     ungroup()
 }
 
@@ -430,7 +443,8 @@ check_by <- function(dados, by) {
 # Menor corte c tal que a precisao entre os clipes com confidence >= c
 # atinge o alvo. Com pesos, a precisao e o apoio da decisao sao os
 # ponderados nas celulas em que todo clipe tem inclusion_prob
-threshold_for <- function(df, alvo, n_min, pesos = FALSE, weighted = NULL) {
+threshold_for <- function(df, alvo, n_min, pesos = FALSE, weighted = NULL,
+                          sustained = FALSE) {
   cortes <- sort(unique(round(df$confidence, 2)))
   out <- tibble(threshold = NA_real_, n_support = NA_integer_,
                 precision_at_threshold = NA_real_)
@@ -442,32 +456,39 @@ threshold_for <- function(df, alvo, n_min, pesos = FALSE, weighted = NULL) {
   completa <- pesos && !anyNA(df$inclusion_prob)
   if (isTRUE(weighted) && !completa) return(out)
   ponderar <- completa && !isFALSE(weighted)
-  for (c0 in cortes) {
+  cortes <- cortes[vapply(cortes, \(c0) any(df$confidence >= c0), TRUE)]
+  medida <- function(c0) {
     sub <- filter(df, confidence >= c0)
-    # o corte arredondado pode passar do maior score (0,996 vira 1)
-    if (nrow(sub) == 0) next
-    precisao <- if (ponderar) {
-      weighted_precision(sub$verdict, sub$inclusion_prob)
+    if (ponderar) {
+      c(weighted_precision(sub$verdict, sub$inclusion_prob),
+        kish_n(sub$inclusion_prob))
     } else {
-      mean(sub$verdict == "positive")
+      c(mean(sub$verdict == "positive"), nrow(sub))
     }
-    apoio <- if (ponderar) kish_n(sub$inclusion_prob) else nrow(sub)
-    if (apoio >= n_min && precisao >= alvo) {
-      out$threshold <- c0
-      out$n_support <- nrow(sub)
-      out$precision_at_threshold <- mean(sub$verdict == "positive")
-      if (pesos) {
-        out$precision_weighted_at_threshold <-
-          weighted_precision(sub$verdict, sub$inclusion_prob)
-        out$n_eff <- if (anyNA(sub$inclusion_prob)) {
-          NA_real_
-        } else {
-          kish_n(sub$inclusion_prob)
-        }
-        out$precision_used <- if (ponderar) "weighted" else "unweighted"
-      }
-      return(out)
+  }
+  medidas <- vapply(cortes, medida, numeric(2))
+  # o alvo vale neste corte e em todos os cortes acima com apoio, como em
+  # calibrated_thresholds(); cortes com menos de min_n clipes nao contam
+  apoiados <- which(medidas[2, ] >= n_min)
+  ruins <- apoiados[medidas[1, apoiados] < alvo]
+  validos <- apoiados[medidas[1, apoiados] >= alvo]
+  if (sustained && length(ruins) > 0) validos <- validos[validos > max(ruins)]
+  if (length(validos) == 0) return(out)
+
+  c0 <- cortes[validos[1]]
+  sub <- filter(df, confidence >= c0)
+  out$threshold <- c0
+  out$n_support <- nrow(sub)
+  out$precision_at_threshold <- mean(sub$verdict == "positive")
+  if (pesos) {
+    out$precision_weighted_at_threshold <-
+      weighted_precision(sub$verdict, sub$inclusion_prob)
+    out$n_eff <- if (anyNA(sub$inclusion_prob)) {
+      NA_real_
+    } else {
+      kish_n(sub$inclusion_prob)
     }
+    out$precision_used <- if (ponderar) "weighted" else "unweighted"
   }
   out
 }
@@ -585,6 +606,8 @@ plot_precision <- function(precision, bins = seq(0.1, 1, by = 0.1),
 #'   ([nightly_presence()]);
 #' * `retraining_clips.csv`: positive clips for retraining
 #'   ([retraining_clips()]);
+#' * `thresholds_compared.csv`: empirical and model thresholds, with `fit`
+#'   ([compare_thresholds()]);
 #' * `precision_by_bin.png`: precision curves ([plot_precision()]), when
 #'   'ggplot2' is installed.
 #'
@@ -620,7 +643,10 @@ plot_precision <- function(precision, bins = seq(0.1, 1, by = 0.1),
 #'   instead of the subfolders of `review_dir`.
 #' @param reviewer With `verdicts_file`, optional reviewer(s) whose
 #'   verdicts are used, as in [app_verdicts()].
-#' @param weighted Passed to [suggest_thresholds()].
+#' @param weighted,sustained Passed to [suggest_thresholds()].
+#' @param fit Optional model of [fit_calibration()]. With it,
+#'   [compare_thresholds()] writes `thresholds_compared.csv`.
+#' @param scored,quality With `fit`, passed to [compare_thresholds()].
 #' @param previous For a later round of a design: the
 #'   `validation_by_clip.csv` of the earlier rounds. `validation_by_clip.csv`
 #'   keeps the clips of this round only; the summaries and
@@ -629,7 +655,7 @@ plot_precision <- function(precision, bins = seq(0.1, 1, by = 0.1),
 #'   round. `NULL` looks for it beside `manifest_path` and `previous`.
 #'
 #' @return A list with the tables `validation`, `precision`, `thresholds`,
-#'   `presence` and `retraining`, invisibly.
+#'   `presence` and `retraining` (and `compared`, with `fit`), invisibly.
 #' @export
 post_validation <- function(review_dir = NULL, manifest_path, output_dir,
                             positive_pattern = "positiv",
@@ -638,7 +664,8 @@ post_validation <- function(review_dir = NULL, manifest_path, output_dir,
                             target_precision = 0.90,
                             min_n = 15, verdicts_file = NULL,
                             reviewer = NULL, weighted = NULL,
-                            previous = NULL, candidates = NULL) {
+                            previous = NULL, candidates = NULL, fit = NULL,
+                            scored = NULL, quality = NULL, sustained = FALSE) {
   if (is.null(verdicts_file)) {
     if (is.null(review_dir)) {
       stop("Give `review_dir` (review in the BirdNET GUI) or ",
@@ -693,10 +720,21 @@ post_validation <- function(review_dir = NULL, manifest_path, output_dir,
   write_csv(precisao, file.path(output_dir, "precision_by_bin.csv"))
 
   thresholds <- suggest_thresholds(resultado, target_precision, min_n,
-                                   weighted = weighted)
+                                   weighted = weighted, sustained = sustained)
   write_csv(thresholds, file.path(output_dir, "suggested_thresholds.csv"))
   message("Suggested thresholds (target precision ", target_precision,
           "): see suggested_thresholds.csv")
+
+  comparados <- NULL
+  if (!is.null(fit)) {
+    comparados <- compare_thresholds(resultado, fit, scored,
+                                     target_precision = target_precision,
+                                     min_n = min_n, quality = quality,
+                                     weighted = weighted,
+                                     sustained = sustained)
+    write_csv(comparados, file.path(output_dir, "thresholds_compared.csv"))
+    message("Empirical and model thresholds: see thresholds_compared.csv")
+  }
 
   presenca <- nightly_presence(resultado)
   write_csv(presenca, file.path(output_dir, "nightly_presence.csv"))
@@ -717,7 +755,8 @@ post_validation <- function(review_dir = NULL, manifest_path, output_dir,
   }
 
   message("Done! Results in ", output_dir)
-  invisible(list(validation = resultado, precision = precisao,
-                 thresholds = thresholds, presence = presenca,
-                 retraining = retreino))
+  invisible(c(list(validation = resultado, precision = precisao,
+                   thresholds = thresholds, presence = presenca,
+                   retraining = retreino),
+              if (!is.null(comparados)) list(compared = comparados)))
 }

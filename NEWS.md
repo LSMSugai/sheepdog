@@ -12,6 +12,17 @@
   judgement and are chosen by their verdict. It also warns about
   occasions in both `validation` and `recordings_verified`, which a model
   takes as two independent reviews (#102).
+- New `compare_thresholds()`: the thresholds of `suggest_thresholds()` and
+  `calibrated_thresholds()` side by side for each site x species, with a
+  `flag` that compares the empirical and the model-precision thresholds, the
+  `calibration_quality()` status and a mark for model thresholds above the
+  highest reviewed score. `post_validation(fit = )` writes it to
+  `thresholds_compared.csv` (#104).
+- `suggest_thresholds()` gains `sustained`: with `TRUE`, the target precision
+  must also hold at every higher cut with at least `min_n` clips, the rule of
+  `calibrated_thresholds()`. The default, `FALSE`, keeps the thresholds as
+  they were, because the empirical precision of high cuts is noisy; the
+  documentation gives the cost (#104).
 - Review rounds: `select_clips()` and `extract_validation_clips()` gain
   `previous`, `candidates` and `cells`, to draw another round of a design
   without repeating what was reviewed. In `"random_detections"`, the
