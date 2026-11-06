@@ -13,6 +13,7 @@ NULL
 
 # Colunas usadas via tidy evaluation (evita NOTEs do R CMD check)
 utils::globalVariables(c(
+  "n_reliable", "confidence_max", "species_folder",
   ".a", ".b", ".ini", ".fim", ".linha", ".rec", ".negativo", ".desenho",
   ".todos_neg", ".algum_pos", "inherited_verdict",
   "thr_empirical", "prec_empirical", "n_support", "thr_model_precision",

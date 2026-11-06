@@ -1,5 +1,9 @@
 # sheepdog (development version)
 
+- New `threshold_history()`: the nightly history of the empirical route, from
+  the thresholds of `review_support()`, with no calibration model. Nights of
+  cells without a threshold stay in the history as effort, with `NA` in the
+  detection columns.
 - `previous` in `select_clips()` and `extract_validation_clips()` also takes
   the reviews of the other random design (`"random_detections"` and
   `"random_recordings"`). The draw stays independent, and

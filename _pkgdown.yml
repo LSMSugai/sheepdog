@@ -17,7 +17,12 @@ home:
 
 reference:
   - title: Stage 1 - Validation data
-    desc: Read BirdNET selection tables, select clips for manual review, and cut and pack them.
+    desc: |
+      Read BirdNET selection tables, select clips for manual review, and cut and pack them. Each sampling design sends a different part of the night to review; later rounds leave out what was reviewed.
+
+      ![The same night of twelve recordings under the three sampling designs of select_clips().](../figures/schematic_selection.png)
+
+      ![Review rounds: what was reviewed leaves the pool, and combine_rounds() gives one simple random sample.](../figures/schematic_rounds.png)
     contents:
       - extract_validation_clips
       - read_selection_tables
@@ -26,8 +31,31 @@ reference:
       - covariate_bins
       - cut_clips
       - pack_clips
+  - title: Stage 1 - Review app
+    desc: |
+      Review the clips in a local app and read its verdicts.
+
+      ![Review: each clip is heard and gets one verdict.](../figures/schematic_review.png)
+    contents:
+      - run_app
+      - app_verdicts
+  - title: Stage 1 - Several reviewers
+    desc: |
+      Split the clips among reviewers, measure their agreement and combine their verdicts.
+
+      ![Several reviewers: a share of the clips goes to both, which gives their agreement.](../figures/schematic_reviewers.png)
+    contents:
+      - assign_reviewers
+      - split_by_reviewer
+      - reviewer_agreement
+      - consensus_verdicts
   - title: Stage 1 - After the review
-    desc: Classify the reviewed clips and summarise precision, thresholds, presence and retraining clips.
+    desc: |
+      Classify the reviewed clips and summarise precision, thresholds, presence and retraining clips. The [diagnostic diagram](../figures/stage1_diagnostic.png) shows what to do with each label of `review_support()`, and how to compare the empirical and model-based thresholds.
+
+      ![The two thresholds on simulated data: the precision above each cut, where each curve reaches p_min, the choice of model and the comparison.](../figures/thresholds.png)
+
+      ![The retraining loop, for when the classifier and not the review limits precision.](../figures/schematic_retraining.png)
     contents:
       - post_validation
       - classify_review
@@ -42,20 +70,13 @@ reference:
       - build_training_set
       - exclude_training_clips
       - training_nights
-  - title: Stage 1 - Review app
-    desc: Review the clips in a local app and read its verdicts.
-    contents:
-      - run_app
-      - app_verdicts
-  - title: Stage 1 - Several reviewers
-    desc: Split the clips among reviewers, measure their agreement and combine their verdicts.
-    contents:
-      - assign_reviewers
-      - split_by_reviewer
-      - reviewer_agreement
-      - consensus_verdicts
   - title: Stage 2 - Calibration
-    desc: Calibrate confidence scores into probabilities of true detection and build nightly detection histories.
+    desc: |
+      Calibrate confidence scores into probabilities of true detection and build nightly detection histories. The [calibration diagram](../figures/stage2_calibration.png) has the steps and checks in order.
+
+      ![The reviewed clips give the curve, and every detection gets its P(tp).](../figures/schematic_curve.png)
+
+      ![The detections of a night become one cell of the nightly history.](../figures/schematic_nights.png)
     contents:
       - calibrate
       - read_validations
@@ -70,10 +91,14 @@ reference:
       - calibrated_thresholds
       - compare_thresholds
       - detection_history
+      - threshold_history
       - summarise_history
       - plot_calibration
   - title: Stage 2 - Bayesian calibration
-    desc: Fit the calibration with brms, check the prior and the fit, and propagate the uncertainty to the histories and the matrices.
+    desc: |
+      Fit the calibration with brms, check the prior and the fit, and propagate the uncertainty to the histories and the matrices.
+
+      ![The posterior of P(tp) gives one history per draw, and a mean and an interval per cell of the matrices.](../figures/schematic_draws.png)
     contents:
       - calibration_prior
       - prior_predictive_calibration
@@ -86,7 +111,10 @@ reference:
       - occasion_draws
       - community_matrices_draws
   - title: Stage 3 - Community matrices
-    desc: Effort-standardised site x month matrices from calibrated histories.
+    desc: |
+      Effort-standardised site x month matrices from calibrated histories. The [diagram](../figures/stage3_community.png) also shows the occupancy export.
+
+      ![From the nightly history to the matrices and their analysis.](../figures/schematic_matrix.png)
     contents:
       - build_community_matrices
       - community_matrices
@@ -111,6 +139,7 @@ articles:
       - validation-effort
       - calibration
       - bayesian-calibration
+      - articles/choosing-a-route
       - community-matrices
   - title: Beyond the three stages
     navbar: Beyond the three stages
