@@ -230,3 +230,11 @@ test_that("suggest_thresholds() checks `weighted`", {
                c("site", "species_folder", "threshold", "n_support",
                  "precision_at_threshold"))
 })
+
+test_that("suggest_thresholds() copes with a top score that rounds up", {
+  v <- tibble::tibble(site = "A", species_folder = "Sp",
+                      confidence = c(rep(0.8, 20), 0.996),
+                      verdict = "positive", inclusion_prob = 0.5)
+  thr <- suggest_thresholds(v, min_n = 5)
+  expect_equal(thr$threshold, 0.8)
+})

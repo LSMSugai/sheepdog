@@ -13,7 +13,9 @@ NULL
 
 # Colunas usadas via tidy evaluation (evita NOTEs do R CMD check)
 utils::globalVariables(c(
-  ".cell", ".env", "n_high", "n_fp", "n_high_all", "prec_high", "unreviewed_high",
+  ".cell", ".env", ".entrada", ".estrato", ".pr", ".inicio", ".esperado", ".n_antes", ".n_agora", ".antes",
+  "stratum", "n_candidates", "n_drawn", "n_rounds", "sampling_mode",
+ "n_high", "n_fp", "n_high_all", "prec_high", "unreviewed_high",
   "diagnosis", ".sp", ".rodada", ".desempate", "recording", "time",
   ".g", ".p", "mista", ".confiavel", "pr_reliable", "p_tp_lower", "draw", "max_rhat",
   "min_ess_bulk", "min_ess_tail", "n_divergent", "n", 

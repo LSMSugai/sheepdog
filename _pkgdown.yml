@@ -38,6 +38,7 @@ reference:
       - retraining_clips
       - plot_precision
       - read_validation_tables
+      - combine_rounds
       - build_training_set
       - exclude_training_clips
       - training_nights
