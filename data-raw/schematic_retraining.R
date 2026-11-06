@@ -18,3 +18,7 @@ b <- c(
   svg_arrow(xs[1], y + 150, xs[1], y + 136, dash = FALSE),
   svg_text(mean(xs[c(1, 5)]), y + 176, "a new random draw, review and diagnostic", 12, cinza))
 save_schematic(b, "schematic_retraining", 770, 235)
+
+# A vinheta retraining vai no pacote, e pkgdown/assets nao: copia para vignettes/
+file.copy("pkgdown/assets/figures/schematic_retraining.png",
+          "vignettes/figures/retraining-loop.png", overwrite = TRUE)
