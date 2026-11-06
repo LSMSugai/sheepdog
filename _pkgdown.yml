@@ -123,6 +123,7 @@ articles:
       - validation-effort
       - calibration
       - bayesian-calibration
+      - articles/choosing-a-route
       - community-matrices
   - title: Beyond the three stages
     navbar: Beyond the three stages

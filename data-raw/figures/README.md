@@ -15,6 +15,8 @@ data-raw/figures/make_figures.sh
 - `build_abstracts.py` puts the panels into one HTML page per figure (`abstracts/`), with
   `base.css` and the Figtree and IBM Plex Mono fonts embedded.
 - `build_retrain.py` writes the retraining figure (Figure 3) from the same panels and styles.
+- `build_routes_article.py` writes the routes figure of `vignettes/articles/choosing-a-route.Rmd`
+  (`vignettes/articles/figures/routes.png`), from `routes_data.py` and `routes_graphics.py`.
 - `render.js` saves each page as a PNG at 2x with Playwright.
 
 Figures: `0_sheepdog_pipeline` (overview), `1_stage1_validation` (Figure 1),
