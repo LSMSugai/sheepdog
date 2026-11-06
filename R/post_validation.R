@@ -47,7 +47,8 @@ classify_review <- function(manifest, review_dir,
   resultado <- manifesto |>
     left_join(select(revisao, clip_file, verdict, reviewed_path),
               by = "clip_file") |>
-    mutate(verdict = replace_na(verdict, "clip_missing"))
+    mutate(verdict = replace_na(verdict, "clip_missing")) |>
+    fill_inherited()
 
   contagem <- count(resultado, verdict)
   message("Clips in the manifest: ", nrow(manifesto), "\n",
@@ -512,7 +513,7 @@ nightly_presence <- function(validation) {
 #'   and `source_audio`.
 #' @export
 retraining_clips <- function(validation) {
-  validation |>
+  validation[!is_inherited(validation), ] |>
     filter(verdict == "positive") |>
     select(site, species_code, species_folder, clip_file, reviewed_path,
            confidence, night, recording_hour, source_audio)
