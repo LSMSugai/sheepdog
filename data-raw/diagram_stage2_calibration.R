@@ -32,8 +32,8 @@ save_diagram(paste0('digraph s2 {', diagram_header("Stage 2. Calibration: from s
     w3 [label = "Way 3 (brms)\nhistory_draws()\none history per posterior draw"]
     {rank = same; w1 -> w2 -> w3 [style = invis]}
   }
-  next3 [label = "Community matrices (Figure 5)", fillcolor = "#d9f2e0", color = "#8fbf9f"]
-  nextocc [label = "Occupancy with false positives (Figure 5)", fillcolor = "#efe2f8", color = "#b393c9"]
+  next3 [label = "Community matrices", fillcolor = "#d9f2e0", color = "#8fbf9f"]
+  nextocc [label = "Occupancy with false positives", fillcolor = "#efe2f8", color = "#b393c9"]
 
   val -> ler -> cv -> fit -> q
   fit -> checks [style = dashed]

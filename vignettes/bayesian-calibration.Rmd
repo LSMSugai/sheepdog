@@ -311,6 +311,8 @@ empirical threshold and with one history per draw.
 
 ## Propagating the uncertainty to the community matrices
 
+![The posterior of P(tp) gives one history per draw, and a mean and an interval per cell of the matrices.](figures/schematic_draws.png){width=100%}
+
 Both rules still produce a single history. `history_draws()` rebuilds the
 history for each of `n_draws` posterior draws: in a draw, a detection is
 reliable when its probability in that draw is >= `p_min`. The cost is

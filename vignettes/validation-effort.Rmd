@@ -516,6 +516,8 @@ proportional to the number of candidate occasions.
 
 ## Further rounds of review
 
+![Review rounds: what was reviewed leaves the pool, and `combine_rounds()` gives one simple random sample.](figures/schematic_rounds.png){width=100%}
+
 When `review_support()` labels a cell `"review more"`, draw another round
 with `previous`. The occasions drawn earlier leave the pool, so nothing is
 reviewed twice, and `n_top` occasions are drawn per stratum among the rest:

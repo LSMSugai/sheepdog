@@ -18,6 +18,8 @@ BirdNET confidence scores into probabilities that a detection is a true
 positive, scoring every detection, and building nightly detection
 histories. Each step is run on the example data shipped with the package.
 
+![The calibration in order: the steps and the checks between the reviewed clips and the nightly histories.](figures/stage2_calibration.png){width=100%}
+
 ```{r, message = FALSE}
 library(sheepdog)
 library(dplyr)
@@ -34,6 +36,8 @@ for studies in which the detections cannot all be reviewed. The conversion
 is a logistic regression of the verdict on a sample of manually validated
 detections; on logit(score), it is applied, for instance, by Owens et al.
 (2026).
+
+![Where false positives come from. The scores of true and false detections overlap, so a detection in the middle of the scale can be either, and no cut on the score separates them. The curves are illustrative, not data.](figures/score_overlap.png){width=100%}
 
 One curve for all species is rarely enough. The same score can mean
 different things for different species, because the score distributions
@@ -247,6 +251,8 @@ but it is not one of the built-in candidates.
 
 ## Calibration curves
 
+![The reviewed clips give the curve, and every detection gets its P(tp).](figures/schematic_curve.png){width=100%}
+
 `plot_calibration()` draws the calibrated probability against the score,
 one panel per species and one line per site. The points give the observed
 precision of the reviewed clips in 0.1-wide score bins, sized by the
@@ -441,6 +447,8 @@ confirms them must be drawn with the same threshold as the analysis (see
 keeps the meaning of a detection the same in every cell.
 
 ## Nightly detection histories
+
+![The detections of a night become one cell of the nightly history.](figures/schematic_nights.png){width=100%}
 
 `detection_history()` aggregates the scored detections by site x species
 x night. A detection is reliable when its calibrated probability is at

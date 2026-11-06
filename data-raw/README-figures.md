@@ -5,5 +5,9 @@ The stage figures of the pkgdown site, based on the figures drawn by Larissa S. 
 - `schematic_*.R`: small drawings, one idea each, from the icons in `schematic_icons.R`.
 - `diagram_stage*.R`: Graphviz diagrams, used where there is a decision to follow, with the style in `diagram_style.R`.
 - `plot_routes.R`: ggplot2 figures on simulated data, for the reference index and `vignettes/articles/choosing-a-route.Rmd`.
+- `plot_scores.R`: the overlap of the scores of true and false detections.
+- `plot_occupancy.R`, `occupancy_*.dot`: occupancy with false positives, adapted from the article "How crywolf works".
+- `copy_figures.R`: copies the figures to the vignettes and articles; run it after redrawing any of them.
+- `cheatsheet/`: the HTML of the cheat sheet, and `build.R`, which prints it to `pkgdown/assets/cheatsheets/sheepdog-cheatsheet.pdf` with Google Chrome.
 
-The PNGs go to `pkgdown/assets/figures/` (and `vignettes/articles/figures/`), outside the built package, because only the site uses them.
+The PNGs go to `pkgdown/assets/figures/`, and the copies to `vignettes/articles/figures/` stay outside the built package. The copies in `vignettes/figures/` go into it, because the vignettes use them.

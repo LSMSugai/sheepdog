@@ -25,7 +25,7 @@ save_diagram(paste0('digraph diag {', diagram_header("After the review: the empi
     nr [label = "\\"not reviewed\\"\ndraw clips for the cell"]
     re [label = "\\"reached\\"\nthe cell has a threshold", penwidth = 2]
     ex [label = "\\"exhausted\\"\nkeep the clips; the model may\nstill give a threshold"]
-    un [label = "\\"unreliable\\"\nthe classifier is the limit:\nretraining (Figure 3)"]
+    un [label = "\\"unreliable\\"\nthe classifier is the limit:\nretraining"]
     mo [label = "\\"review more\\"\nselect_clips(previous = ),\nthen combine_rounds()"]
   }
 
