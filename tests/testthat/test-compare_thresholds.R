@@ -106,3 +106,30 @@ test_that("post_validation() writes the comparison with `fit`", {
   expect_true(file.exists(file.path(dir, "out", "thresholds_compared.csv")))
   expect_identical(nrow(out$compared), 2L)
 })
+
+test_that("the empirical column uses the weighted precision", {
+  d <- cells_sim()
+  fit <- fit_global(d)
+  val <- as_validation(d)
+  val$inclusion_prob <- ifelse(val$confidence > 0.5, 0.2, 0.8)
+  cmp <- compare_thresholds(val, fit, as_scored(d, fit))
+  thr <- suggest_thresholds(val)
+  expect_identical(unique(thr$precision_used), "weighted")
+  expect_equal(cmp$prec_empirical[order(cmp$site)],
+               thr$precision_weighted_at_threshold[order(thr$site)])
+  # `sustained` chega a suggest_thresholds()
+  com <- compare_thresholds(val, fit, as_scored(d, fit), sustained = TRUE)
+  esperado <- suggest_thresholds(val, sustained = TRUE)
+  expect_equal(com$thr_empirical[order(com$site)],
+               esperado$threshold[order(esperado$site)])
+})
+
+test_that("an empirical threshold without a model one is empirical_only", {
+  d <- cells_sim()
+  fit <- fit_global(d)
+  sc <- as_scored(d, fit)
+  # o modelo nunca chega ao alvo, e os clipes chegam
+  sc$p_tp <- 0.5
+  cmp <- compare_thresholds(as_validation(d), fit, sc)
+  expect_true(all(cmp$flag == "empirical_only"))
+})
