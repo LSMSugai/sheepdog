@@ -70,6 +70,7 @@ reference:
       - calibrated_thresholds
       - compare_thresholds
       - detection_history
+      - threshold_history
       - summarise_history
       - plot_calibration
   - title: Stage 2 - Bayesian calibration
