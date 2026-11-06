@@ -62,6 +62,9 @@ A tibble with \code{site}, \code{species_folder}, the \code{by} columns,
 (reviewed clips with score >= \code{conf_high}), \code{prec_high} (their
 precision), \code{n_high_all} (predictions with score >= \code{conf_high}),
 \code{unreviewed_high}, \code{threshold} and \code{diagnosis}, ordered by diagnosis.
+With a table of \code{\link[=combine_rounds]{combine_rounds()}}, also \code{n_rounds} and
+\code{reached_last_round}: the cell has a threshold now but had none before
+its last round.
 }
 \description{
 For each site x species cell (and each level of the \code{by} columns, such as

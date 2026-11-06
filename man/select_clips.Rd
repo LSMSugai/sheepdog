@@ -30,7 +30,10 @@ select_clips(
   max_per_species = NULL,
   remap_from = NULL,
   remap_to = NULL,
-  seed = 2026
+  seed = 2026,
+  previous = NULL,
+  candidates = NULL,
+  cells = NULL
 )
 }
 \arguments{
@@ -161,13 +164,29 @@ Backslashes are turned into forward slashes first.}
 
 \item{seed}{Seed of every random draw. The global random number
 generator is left as it was.}
+
+\item{previous}{Earlier rounds of the same design, to draw another round
+(see Review rounds): paths to their \code{clip_manifest.csv} or
+\code{validation_by_clip.csv}, a data frame, or a list of these.}
+
+\item{candidates}{With \code{previous}, the \code{candidates.csv} of the first
+round, as a path or a data frame. \code{NULL} looks for it in the folders of
+\code{previous}.}
+
+\item{cells}{With \code{previous}, restrict the round to these cells: a data
+frame with \code{site} and \code{species_folder} or \code{species_code}, such as the
+rows of \code{\link[=review_support]{review_support()}} with \code{diagnosis == "review more"}.}
 }
 \value{
 A tibble, the clip manifest without \code{status}, with the columns
 \code{site}, \code{species_code}, \code{species_folder}, \code{recording_date}, \code{night},
 \code{recording_hour}, \code{rank}, \code{confidence}, \code{clip_file}, \code{clip_start},
 \code{clip_end}, \code{duration}, \code{source_audio}, \code{begin_path}, \code{sampling_mode},
-\code{occasion_id}, \code{n_detections_occasion} and \code{inclusion_prob}. See
+\code{occasion_id}, \code{n_detections_occasion}, \code{inclusion_prob} (cumulative
+over the rounds), \code{round}, \code{n_candidates} (\code{N} of the stratum), \code{n_drawn}
+(occasions drawn in the stratum, all rounds so far; both \code{NA} outside
+\code{"random_detections"} and under a cap) and \code{inclusion_prob_round} (the
+draw of that round alone). See
 \code{vignette("crywolf-integration")} for their definitions.
 }
 \description{
@@ -200,5 +219,32 @@ recording (or minute), copied once per species to annotate, and
 }
 
 In both random modes, use the same \code{threshold} as the occupancy analysis.
+}
+
+\section{Review rounds}{
+
+\code{previous} draws one more round of a design without repeating what was
+reviewed. In \code{"random_detections"}, the occasions drawn earlier leave the
+pool and \code{n_top} occasions are drawn per stratum among the rest. Drawing
+\code{n1} occasions of \code{N} and then \code{n2} of the \code{N - n1} left gives a simple
+random sample of \code{n1 + n2}, so after each round every clip has the
+inclusion probability \code{n_drawn / n_candidates}, whatever its round. This
+needs the same candidates, strata, threshold and occasion unit in every
+round. The first round therefore keeps a list of its candidates, in the
+attribute \code{"candidates"} of the manifest, written to \code{candidates.csv} by
+\code{\link[=extract_validation_clips]{extract_validation_clips()}}; later rounds draw from that list, and a
+warning says when the predictions have changed. A different \code{threshold},
+\code{occasion_unit} or \code{strata} is refused, and so are \code{target_total} and
+\code{max_per_species}, whose second stage depends on the counts of each
+round. Round \code{k} uses the seed \code{seed + k - 1}.
+
+The tables of earlier rounds keep the probability of their own round:
+use \code{\link[=combine_rounds]{combine_rounds()}} to stack them. In \code{"top"}, there is no inclusion
+probability, and \code{previous} only leaves out the clips already reviewed.
+\code{previous} is not available for \code{"random_recordings"}.
+
+Choosing the cells of a round from their verdicts, and stopping when a
+cell reaches a target, makes the stopping depend on the results; see
+\code{vignette("validation-effort")}.
 }
 

@@ -27,6 +27,31 @@
 #'
 #' In both random modes, use the same `threshold` as the occupancy analysis.
 #'
+#' @section Review rounds:
+#' `previous` draws one more round of a design without repeating what was
+#' reviewed. In `"random_detections"`, the occasions drawn earlier leave the
+#' pool and `n_top` occasions are drawn per stratum among the rest. Drawing
+#' `n1` occasions of `N` and then `n2` of the `N - n1` left gives a simple
+#' random sample of `n1 + n2`, so after each round every clip has the
+#' inclusion probability `n_drawn / n_candidates`, whatever its round. This
+#' needs the same candidates, strata, threshold and occasion unit in every
+#' round. The first round therefore keeps a list of its candidates, in the
+#' attribute `"candidates"` of the manifest, written to `candidates.csv` by
+#' [extract_validation_clips()]; later rounds draw from that list, and a
+#' warning says when the predictions have changed. A different `threshold`,
+#' `occasion_unit` or `strata` is refused, and so are `target_total` and
+#' `max_per_species`, whose second stage depends on the counts of each
+#' round. Round `k` uses the seed `seed + k - 1`.
+#'
+#' The tables of earlier rounds keep the probability of their own round:
+#' use [combine_rounds()] to stack them. In `"top"`, there is no inclusion
+#' probability, and `previous` only leaves out the clips already reviewed.
+#' `previous` is not available for `"random_recordings"`.
+#'
+#' Choosing the cells of a round from their verdicts, and stopping when a
+#' cell reaches a target, makes the stopping depend on the results; see
+#' `vignette("validation-effort")`.
+#'
 #' @param detections Predictions, as returned by [read_selection_tables()].
 #' @param sampling_mode `"top"`, `"random_detections"` or
 #'   `"random_recordings"`. See *Sampling modes*.
@@ -128,6 +153,15 @@
 #' @param remap_from,remap_to Replace the prefix `remap_from` of the
 #'   `begin_path` paths by `remap_to`, e.g. `"N:/"` and `"/Volumes/Arara/"`.
 #'   Backslashes are turned into forward slashes first.
+#' @param previous Earlier rounds of the same design, to draw another round
+#'   (see Review rounds): paths to their `clip_manifest.csv` or
+#'   `validation_by_clip.csv`, a data frame, or a list of these.
+#' @param candidates With `previous`, the `candidates.csv` of the first
+#'   round, as a path or a data frame. `NULL` looks for it in the folders of
+#'   `previous`.
+#' @param cells With `previous`, restrict the round to these cells: a data
+#'   frame with `site` and `species_folder` or `species_code`, such as the
+#'   rows of [review_support()] with `diagnosis == "review more"`.
 #' @param seed Seed of every random draw. The global random number
 #'   generator is left as it was.
 #'
@@ -135,7 +169,11 @@
 #'   `site`, `species_code`, `species_folder`, `recording_date`, `night`,
 #'   `recording_hour`, `rank`, `confidence`, `clip_file`, `clip_start`,
 #'   `clip_end`, `duration`, `source_audio`, `begin_path`, `sampling_mode`,
-#'   `occasion_id`, `n_detections_occasion` and `inclusion_prob`. See
+#'   `occasion_id`, `n_detections_occasion`, `inclusion_prob` (cumulative
+#'   over the rounds), `round`, `n_candidates` (`N` of the stratum), `n_drawn`
+#'   (occasions drawn in the stratum, all rounds so far; both `NA` outside
+#'   `"random_detections"` and under a cap) and `inclusion_prob_round` (the
+#'   draw of that round alone). See
 #'   `vignette("crywolf-integration")` for their definitions.
 #' @export
 select_clips <- function(detections,
@@ -164,7 +202,10 @@ select_clips <- function(detections,
                          max_per_species = NULL,
                          remap_from = NULL,
                          remap_to = NULL,
-                         seed = 2026) {
+                         seed = 2026,
+                         previous = NULL,
+                         candidates = NULL,
+                         cells = NULL) {
   modo    <- match.arg(sampling_mode)
   estrato1 <- resolve_strata(strata)
   rotulo1  <- paste(estrato1, collapse = " x ")
@@ -172,6 +213,35 @@ select_clips <- function(detections,
   janela  <- list(hour_start = hour_start, hour_end = hour_end,
                   alternate_days = alternate_days,
                   date_start = date_start, date_end = date_end)
+
+  # Rodadas anteriores do mesmo desenho
+  rodadas <- NULL
+  rodada <- 1L
+  if (!is.null(previous)) {
+    rodadas <- read_previous(previous)
+    outros <- setdiff(unique(rodadas$sampling_mode), modo)
+    if (length(outros) > 0) {
+      stop("`previous` has clips of ", paste(outros, collapse = ", "),
+           ", and this draw is ", modo, ": `previous` takes rounds of the ",
+           "same design.", call. = FALSE)
+    }
+    if (modo == "random_recordings") {
+      stop("`previous` is not available for \"random_recordings\".",
+           call. = FALSE)
+    }
+    if (!is.null(target_total) || !is.null(max_per_species)) {
+      stop("`target_total` and `max_per_species` cannot be used with ",
+           "`previous`: the second stage would depend on the counts of each ",
+           "round.", call. = FALSE)
+    }
+    rodada <- max(rodadas$round) + 1L
+  } else if (!is.null(candidates) || !is.null(cells)) {
+    stop("`candidates` and `cells` are for later rounds: give `previous`.",
+         call. = FALSE)
+  }
+  if (!is.null(cells) && modo != "random_detections") {
+    stop("`cells` is for \"random_detections\".", call. = FALSE)
+  }
 
   # Piloto: restringir aos locais pedidos
   if (!is.null(sites)) {
@@ -262,6 +332,20 @@ select_clips <- function(detections,
       }
     }
 
+    if (!is.null(rodadas)) {
+      vistos <- rodadas |>
+        transmute(across(all_of(ocasiao_chave)),
+                  .inicio = round(clip_start, 3))
+      antes <- nrow(selecao)
+      selecao <- selecao |>
+        mutate(.inicio = round(clip_start, 3),
+               site = as.character(site)) |>
+        anti_join(vistos, by = c(ocasiao_chave, ".inicio")) |>
+        select(-.inicio)
+      message(antes - nrow(selecao), " predictions already in `previous` ",
+              "left out.")
+    }
+
     selecao <- selecao |>
       group_by(site, species_code, night, recording_hour) |>
       arrange(desc(confidence), .by_group = TRUE) |>
@@ -297,17 +381,43 @@ select_clips <- function(detections,
       stop("The `strata` columns must be constant within an occasion; ",
            "some occasions fall in more than one stratum.", call. = FALSE)
     }
-    selecao <- withr::with_seed(seed, {
-      ocasioes |>
-        group_by(across(all_of(estrato1))) |>
-        mutate(.p1 = min(n_top, n()) / n()) |>
-        slice_sample(n = n_top) |>
-        ungroup()
-    })
-    message(nrow(selecao), " occasions drawn (", n_top,
-            " per ", rotulo1, ") among ",
-            n_distinct(deteccoes[c("site", "species_code", "occasion_id")]),
-            " with a prediction >= ", threshold, ".")
+    limitado <- !is.null(target_total) || !is.null(max_per_species)
+    atual <- build_candidates(ocasioes, estrato1, threshold, unidade, rotulo1,
+                              limitado)
+    if (is.null(rodadas)) {
+      lista <- atual
+      selecao <- withr::with_seed(seed, {
+        ocasioes |>
+          group_by(across(all_of(estrato1))) |>
+          mutate(.p1 = min(n_top, n()) / n(),
+                 n_candidates = n(),
+                 n_drawn = min(n_top, n())) |>
+          slice_sample(n = n_top) |>
+          ungroup() |>
+          mutate(.pr = .p1)
+      })
+      message(nrow(selecao), " occasions drawn (", n_top,
+              " per ", rotulo1, ") among ",
+              n_distinct(deteccoes[c("site", "species_code", "occasion_id")]),
+              " with a prediction >= ", threshold, ".")
+    } else {
+      lista <- read_candidates(candidates, if (is.character(previous)) previous)
+      if (is.null(lista)) {
+        warning("No candidates.csv found: the candidates are rebuilt from ",
+                "the predictions, assuming that they did not change since ",
+                "the first round.", call. = FALSE)
+        lista <- atual
+      }
+      check_round_design(lista, threshold, unidade, rotulo1)
+      warn_changed_pool(atual, lista)
+      check_round_probs(rodadas, lista)
+      selecao <- draw_round(lista, rodadas, n_top, seed, rodada, cells)
+      perdidas <- nrow(anti_join(selecao, atual, by = ocasiao_chave))
+      if (perdidas > 0) {
+        warning(perdidas, " occasion(s) drawn have no prediction now, so ",
+                "they give no clip.", call. = FALSE)
+      }
+    }
     ocasioes_candidatas <- selecao
   } else {
     # Sorteio entre TODAS as gravacoes (ou minutos), com ou sem predicao,
@@ -445,7 +555,10 @@ select_clips <- function(detections,
     selecao <- selecao |>
       left_join(p2, by = estrato) |>
       transmute(site, species_code, occasion_id,
-                inclusion_prob = .p1 * .p2) |>
+                inclusion_prob = .p1 * .p2,
+                inclusion_prob_round = .pr * .p2,
+                n_candidates = if (usou_meta) NA_integer_ else n_candidates,
+                n_drawn = if (usou_meta) NA_integer_ else n_drawn) |>
       inner_join(deteccoes, by = c("site", "species_code", "occasion_id"),
                  relationship = "one-to-many") |>
       group_by(site, species_code, occasion_id) |>
@@ -459,14 +572,21 @@ select_clips <- function(detections,
             " of the ", n_distinct(selecao[c("site", "species_code",
                                              "occasion_id")]),
             " occasions drawn).")
-    if (all(selecao$inclusion_prob == 1)) {
+    if (nrow(selecao) > 0 && is.null(rodadas) &&
+        all(selecao$inclusion_prob == 1)) {
       message("Every candidate occasion was taken (inclusion_prob = 1): this ",
               "is a census of them, not a random draw. For a sample, use ",
               "wider `strata` or a smaller `n_top`.")
     }
   }
 
-  selecao <- mutate(selecao, sampling_mode = modo)
+  selecao <- mutate(selecao, sampling_mode = modo, round = rodada)
+  for (col in c("n_candidates", "n_drawn")) {
+    if (!col %in% names(selecao)) selecao[[col]] <- NA_integer_
+  }
+  if (!"inclusion_prob_round" %in% names(selecao)) {
+    selecao$inclusion_prob_round <- selecao$inclusion_prob
+  }
   if (!is.null(n_det_ocasiao)) {
     selecao <- selecao |>
       left_join(n_det_ocasiao, by = c("site", "species_code", "occasion_id")) |>
@@ -475,7 +595,9 @@ select_clips <- function(detections,
     selecao$n_detections_occasion <- NA_integer_
   }
 
-  select(selecao, all_of(manifest_columns[manifest_columns != "status"]))
+  saida <- select(selecao, all_of(manifest_columns[manifest_columns != "status"]))
+  if (modo == "random_detections") attr(saida, "candidates") <- lista
+  saida
 }
 
 # Colunas do manifesto, na ordem do arquivo clip_manifest.csv
@@ -483,7 +605,8 @@ manifest_columns <- c(
   "site", "species_code", "species_folder", "recording_date", "night",
   "recording_hour", "rank", "confidence", "clip_file", "clip_start",
   "clip_end", "duration", "source_audio", "begin_path", "status",
-  "sampling_mode", "occasion_id", "n_detections_occasion", "inclusion_prob"
+  "sampling_mode", "occasion_id", "n_detections_occasion", "inclusion_prob",
+  "round", "n_candidates", "n_drawn", "inclusion_prob_round"
 )
 
 # Lista todas as gravacoes de cada local: a tabela dada (data frame ou

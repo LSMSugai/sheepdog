@@ -1,5 +1,20 @@
 # sheepdog (development version)
 
+- Review rounds: `select_clips()` and `extract_validation_clips()` gain
+  `previous`, `candidates` and `cells`, to draw another round of a design
+  without repeating what was reviewed. In `"random_detections"`, the
+  occasions drawn earlier leave the pool and the rounds together are a
+  simple random sample of each stratum. The first round writes
+  `candidates.csv`, later rounds draw from it, and a different `threshold`,
+  `occasion_unit` or `strata`, or a cap, is refused. Manifests gain `round`,
+  `n_candidates`, `n_drawn` and `inclusion_prob_round`. The new
+  `combine_rounds()`, also through `read_validation_tables(candidates = )`
+  and `post_validation(previous = )`, gives every clip the cumulative
+  `inclusion_prob`; `review_support()` then adds `n_rounds` and
+  `reached_last_round`. `vignette("validation-effort")` measures the bias of
+  stopping when a cell reaches the target (#107).
+- `suggest_thresholds()`: weighted cells no longer fail when the highest
+  score rounds up past itself (0.996 gives the cut 1).
 - `suggest_thresholds()` now chooses the cut with the precision weighted by
   `1 / inclusion_prob` in the cells whose clips all have it, as
   `"random_detections"` draws strata with unequal probabilities. `min_n`

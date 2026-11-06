@@ -211,6 +211,7 @@ suggest_thresholds <- function(validation, target_precision = 0.90,
     stop("`weighted` must be NULL, TRUE or FALSE.", call. = FALSE)
   }
   validados <- reviewed_with_confidence(validation)
+  warn_uncombined(validados)
   pesos <- has_inclusion_prob(validados)
   if (isTRUE(weighted) && nrow(validados) > 0 && !pesos) {
     stop("`weighted = TRUE` needs `inclusion_prob`, which no reviewed clip ",
@@ -296,6 +297,9 @@ suggest_thresholds <- function(validation, target_precision = 0.90,
 #'   (reviewed clips with score >= `conf_high`), `prec_high` (their
 #'   precision), `n_high_all` (predictions with score >= `conf_high`),
 #'   `unreviewed_high`, `threshold` and `diagnosis`, ordered by diagnosis.
+#'   With a table of [combine_rounds()], also `n_rounds` and
+#'   `reached_last_round`: the cell has a threshold now but had none before
+#'   its last round.
 #' @seealso `vignette("validation-effort")`.
 #' @export
 review_support <- function(validation, detections, conf_high = 0.7,
@@ -359,8 +363,9 @@ review_support <- function(validation, detections, conf_high = 0.7,
                                  min_n = min_n, by = by,
                                  weighted = weighted) |>
     select(all_of(celula), threshold)
+  rodadas <- rounds_by_cell(val, celula, target_precision, min_n, by, weighted)
 
-  full_join(revisados, todas, by = celula) |>
+  saida <- full_join(revisados, todas, by = celula) |>
     left_join(limiares, by = celula) |>
     mutate(
       n_reviewed = replace_na(n_reviewed, 0L),
@@ -378,6 +383,33 @@ review_support <- function(validation, detections, conf_high = 0.7,
     select(all_of(celula), n_reviewed, n_fp, n_high, prec_high, n_high_all,
            unreviewed_high, threshold, diagnosis) |>
     arrange(diagnosis, species_folder, site, across(all_of(by)))
+  if (is.null(rodadas)) return(saida)
+  saida <- left_join(saida, rodadas, by = celula) |>
+    mutate(reached_last_round = diagnosis == "reached" & !replace_na(.antes, FALSE) &
+             replace_na(n_rounds, 1L) > 1L) |>
+    select(-.antes)
+  if (any(saida$reached_last_round)) {
+    message(sum(saida$reached_last_round), " cell(s) reached the target only ",
+            "in their last round: their precision tends to be too high if ",
+            "that is why the rounds stopped.")
+  }
+  saida
+}
+
+# Rodadas por celula e se ela ja tinha limiar antes da ultima rodada; NULL
+# para tabelas sem combine_rounds()
+rounds_by_cell <- function(val, celula, target_precision, min_n, by, weighted) {
+  if (!"n_rounds" %in% names(val)) return(NULL)
+  val <- filter(val, !is.na(n_rounds))
+  por_celula <- val |>
+    group_by(across(all_of(celula))) |>
+    summarise(n_rounds = n_distinct(round), .groups = "drop")
+  antes <- before_last_round(val)
+  if (nrow(antes) == 0) return(mutate(por_celula, .antes = FALSE))
+  limiar <- suggest_thresholds(antes, target_precision = target_precision,
+                               min_n = min_n, by = by, weighted = weighted) |>
+    transmute(across(all_of(celula)), .antes = !is.na(threshold))
+  left_join(por_celula, limiar, by = celula)
 }
 
 # Colunas extras de agrupamento (argumento `by`)
@@ -411,6 +443,8 @@ threshold_for <- function(df, alvo, n_min, pesos = FALSE, weighted = NULL) {
   ponderar <- completa && !isFALSE(weighted)
   for (c0 in cortes) {
     sub <- filter(df, confidence >= c0)
+    # o corte arredondado pode passar do maior score (0,996 vira 1)
+    if (nrow(sub) == 0) next
     precisao <- if (ponderar) {
       weighted_precision(sub$verdict, sub$inclusion_prob)
     } else {
@@ -586,6 +620,12 @@ plot_precision <- function(precision, bins = seq(0.1, 1, by = 0.1),
 #' @param reviewer With `verdicts_file`, optional reviewer(s) whose
 #'   verdicts are used, as in [app_verdicts()].
 #' @param weighted Passed to [suggest_thresholds()].
+#' @param previous For a later round of a design: the
+#'   `validation_by_clip.csv` of the earlier rounds. `validation_by_clip.csv`
+#'   keeps the clips of this round only; the summaries and
+#'   `validation_combined.csv` cover all rounds, from [combine_rounds()].
+#' @param candidates With `previous`, the `candidates.csv` of the first
+#'   round. `NULL` looks for it beside `manifest_path` and `previous`.
 #'
 #' @return A list with the tables `validation`, `precision`, `thresholds`,
 #'   `presence` and `retraining`, invisibly.
@@ -596,7 +636,8 @@ post_validation <- function(review_dir = NULL, manifest_path, output_dir,
                             bins = seq(0.1, 1, by = 0.1),
                             target_precision = 0.90,
                             min_n = 15, verdicts_file = NULL,
-                            reviewer = NULL, weighted = NULL) {
+                            reviewer = NULL, weighted = NULL,
+                            previous = NULL, candidates = NULL) {
   if (is.null(verdicts_file)) {
     if (is.null(review_dir)) {
       stop("Give `review_dir` (review in the BirdNET GUI) or ",
@@ -615,6 +656,17 @@ post_validation <- function(review_dir = NULL, manifest_path, output_dir,
   }
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   write_csv(resultado, file.path(output_dir, "validation_by_clip.csv"))
+  if (!is.null(previous)) {
+    if (is.null(candidates)) {
+      candidates <- read_candidates(NULL, c(manifest_path, previous))
+    }
+    # sem a coluna `round`, esta rodada vem depois das anteriores
+    resultado <- combine_rounds(c(as.list(previous), list(resultado)),
+                                candidates)
+    write_csv(resultado, file.path(output_dir, "validation_combined.csv"))
+    message("Rounds combined: ", n_distinct(resultado$round),
+            "; see validation_combined.csv")
+  }
 
   validados <- filter(resultado, verdict %in% c("positive", "negative"))
   if (nrow(validados) == 0) {
