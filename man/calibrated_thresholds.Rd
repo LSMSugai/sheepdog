@@ -130,6 +130,6 @@ calibrated_thresholds(fit, target = 0.90, rule = "precision",
 }
 \seealso{
 \code{\link[=suggest_thresholds]{suggest_thresholds()}} for thresholds from the reviewed clips of
-each cell; \code{\link[=calibrate]{calibrate()}}, which writes these thresholds to
+each cell; \code{\link[=compare_thresholds]{compare_thresholds()}} to put both side by side; \code{\link[=calibrate]{calibrate()}}, which writes these thresholds to
 \code{thresholds.csv}.
 }

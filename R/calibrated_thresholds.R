@@ -78,7 +78,7 @@
 #'   threshold may lie above every detection of the cell, and then no set of
 #'   detections reaches the target.
 #' @seealso [suggest_thresholds()] for thresholds from the reviewed clips of
-#'   each cell; [calibrate()], which writes these thresholds to
+#'   each cell; [compare_thresholds()] to put both side by side; [calibrate()], which writes these thresholds to
 #'   `thresholds.csv`.
 #' @export
 #' @examples

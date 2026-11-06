@@ -13,6 +13,10 @@ NULL
 
 # Colunas usadas via tidy evaluation (evita NOTEs do R CMD check)
 utils::globalVariables(c(
+  "thr_empirical", "prec_empirical", "n_support", "thr_model_precision",
+  "thr_p_tp", "p_tp_at_threshold", "model_precision_at_empirical",
+  "max_reviewed", "above_reviewed", "flag", "precision_used",
+  "precision_weighted_at_threshold", "precision_at_threshold", "threshold",
   ".cell", ".env", ".entrada", ".estrato", ".pr", ".inicio", ".esperado", ".n_antes", ".n_agora", ".antes",
   "stratum", "n_candidates", "n_drawn", "n_rounds", "sampling_mode",
  "n_high", "n_fp", "n_high_all", "prec_high", "unreviewed_high",
