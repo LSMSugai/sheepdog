@@ -102,8 +102,9 @@ returns \code{threshold_lower}: the lowest score at which the lower quantile
 threshold that accounts for the uncertainty of the calibration.
 
 \strong{Which clips to review.} The calibration models the verdict given the
-score. Choosing the clips to review by their score only (for instance, a
-sample stratified by score bins, as Wood & Kahl 2024 suggest) does not
+score. Choosing the clips to review by their score only (for instance,
+adding a second random sample from the higher scores, as Wood & Kahl 2024
+suggest for species with few true detections) does not
 bias P(TP | score), as long as the model form is right; it does bias the
 precision computed directly from the reviewed clips, which
 \code{\link[=suggest_thresholds]{suggest_thresholds()}} uses. The site-confirmation design of

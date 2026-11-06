@@ -27,11 +27,13 @@ ex <- system.file("extdata", "example", package = "sheepdog")
 ## Why calibrate
 
 A BirdNET confidence score is a classifier output in [0, 1], not a
-probability that the detection is correct. The BirdNET authors recommend
-converting the scores into probabilities of a true detection (Wood & Kahl
-2024). One way to do so, with a sample of manually validated detections,
-is a logistic regression of the verdict on logit(score), applied, for
-instance, by Owens et al. (2026).
+probability that the detection is correct. Wood & Kahl (2024) describe
+two ways to use the scores: reviewing the detections down to a chosen
+score, or converting the scores into probabilities of a true detection,
+for studies in which the detections cannot all be reviewed. The conversion
+is a logistic regression of the verdict on a sample of manually validated
+detections; on logit(score), it is applied, for instance, by Owens et al.
+(2026).
 
 One curve for all species is rarely enough. The same score can mean
 different things for different species, because the score distributions
