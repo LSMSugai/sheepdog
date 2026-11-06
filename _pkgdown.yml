@@ -17,7 +17,10 @@ home:
 
 reference:
   - title: Stage 1 - Validation data
-    desc: Read BirdNET selection tables, select clips for manual review, and cut and pack them.
+    desc: |
+      Read BirdNET selection tables, select clips for manual review, and cut and pack them. See [Figure 1](figures/stage1_validation.png).
+
+      ![Figure 1. Stage 1 · Validation: selection, review (by one or several reviewers), summary and diagnostic steps.](figures/stage1_validation.png)
     contents:
       - extract_validation_clips
       - read_selection_tables
@@ -26,8 +29,25 @@ reference:
       - covariate_bins
       - cut_clips
       - pack_clips
+  - title: Stage 1 - Review app
+    desc: Review the clips in a local app and read its verdicts. See [Figure 1](figures/stage1_validation.png).
+    contents:
+      - run_app
+      - app_verdicts
+  - title: Stage 1 - Several reviewers
+    desc: Split the clips among reviewers, measure their agreement and combine their verdicts. See [Figure 1](figures/stage1_validation.png).
+    contents:
+      - assign_reviewers
+      - split_by_reviewer
+      - reviewer_agreement
+      - consensus_verdicts
   - title: Stage 1 - After the review
-    desc: Classify the reviewed clips and summarise precision, thresholds, presence and retraining clips.
+    desc: |
+      Classify the reviewed clips and summarise precision, thresholds, presence and retraining clips. See [Figure 2](figures/stage1_diagnostic.png) for step 7, the diagnostic, and [Figure 3](figures/stage1_retraining.png) for retraining.
+
+      ![Figure 2. Stage 1 · Diagnostic: (A) the empirical threshold and its diagnosis, (B) the model-based threshold and its check, and how to compare them.](figures/stage1_diagnostic.png)
+
+      ![Figure 3. Stage 1 · Retraining: when to retrain, the retraining loop and the checks before and after.](figures/stage1_retraining.png)
     contents:
       - post_validation
       - classify_review
@@ -41,20 +61,11 @@ reference:
       - build_training_set
       - exclude_training_clips
       - training_nights
-  - title: Stage 1 - Review app
-    desc: Review the clips in a local app and read its verdicts.
-    contents:
-      - run_app
-      - app_verdicts
-  - title: Stage 1 - Several reviewers
-    desc: Split the clips among reviewers, measure their agreement and combine their verdicts.
-    contents:
-      - assign_reviewers
-      - split_by_reviewer
-      - reviewer_agreement
-      - consensus_verdicts
   - title: Stage 2 - Calibration
-    desc: Calibrate confidence scores into probabilities of true detection and build nightly detection histories.
+    desc: |
+      Calibrate confidence scores into probabilities of true detection and build nightly detection histories. See [Figure 4](figures/stage2_calibration.png), and [Figure 2](figures/stage1_diagnostic.png), route B, for the model-based threshold.
+
+      ![Figure 4. Stage 2 · Calibration: fit, choose and check the calibration, apply it to every detection, three ways to a nightly history, the brms option and what comes next.](figures/stage2_calibration.png)
     contents:
       - calibrate
       - read_validations
@@ -71,7 +82,7 @@ reference:
       - summarise_history
       - plot_calibration
   - title: Stage 2 - Bayesian calibration
-    desc: Fit the calibration with brms, check the prior and the fit, and propagate the uncertainty to the histories and the matrices.
+    desc: Fit the calibration with brms, check the prior and the fit, and propagate the uncertainty to the histories and the matrices. See [Figure 4](figures/stage2_calibration.png), steps 6 and 7.
     contents:
       - calibration_prior
       - prior_predictive_calibration
@@ -84,14 +95,17 @@ reference:
       - occasion_draws
       - community_matrices_draws
   - title: Stage 3 - Community matrices
-    desc: Effort-standardised site x month matrices from calibrated histories.
+    desc: |
+      Effort-standardised site x month matrices from calibrated histories. See [Figure 5](figures/stage3_community.png).
+
+      ![Figure 5. Stage 3 · Community matrices: reliable cells and core species, the entry rule and effort, the matrices and their analysis; and the occupancy export.](figures/stage3_community.png)
     contents:
       - build_community_matrices
       - community_matrices
       - cell_status
       - suggest_core_species
   - title: Occupancy models
-    desc: Export the occasions, scores, reviewed clips and calibration draws for occupancy models with false positives, such as those of crywolf.
+    desc: Export the occasions, scores, reviewed clips and calibration draws for occupancy models with false positives, such as those of crywolf. See [Figure 5](figures/stage3_community.png), occupancy, and [Figure 4](figures/stage2_calibration.png), step 8.
     contents:
       - export_occupancy_data
   - title: Package
