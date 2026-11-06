@@ -3,6 +3,11 @@
 #' Opens a 'shiny' app, in the browser, for stages 1 and 2 of the
 #' workflow. The tabs depend on the arguments:
 #'
+#' * **Intro**: a graphical abstract of the sampling designs and an Audio
+#'   panel to choose the audio folder, the BirdNET results and the
+#'   validation folder (with a dialog of the system), with a summary of the
+#'   recordings per site and night. Folders given to `run_app()` are
+#'   confirmed when the app opens. Without them, the app opens on this tab.
 #' * **Sampling** (with `selection_dir` and `output_dir`): a form for the
 #'   sampling design of [select_clips()]. *Draw* shows the clips per site
 #'   and species and their inclusion probabilities without touching the
@@ -30,7 +35,7 @@
 #'
 #' @section Keyboard:
 #' In the Review tab: `p` positive, `n` negative, `u` uncertain, right
-#' arrow or space next clip, left arrow previous clip.
+#' arrow next clip, left arrow previous clip, space play or pause.
 #'
 #' @section Verdicts file:
 #' A CSV with one line per click: `clip_file`, `species_folder`,
@@ -52,8 +57,9 @@
 #' @param reviewer Name of the reviewer, written with each verdict. With a
 #'   manifest from [assign_reviewers()], only the clips assigned to this
 #'   reviewer (as first or second reviewer) are shown.
-#' @param max_freq Optional upper limit of the spectrogram, in kHz (e.g.
-#'   `8` for most anuran calls). The whole band by default.
+#' @param max_freq Upper limit of the spectrogram, in kHz: 12 by default
+#'   (e.g. `8` for most anuran calls). `NULL` shows the whole band. It can
+#'   also be changed in the Review tab.
 #' @param selection_dir Folder of the BirdNET selection tables (as in
 #'   [read_selection_tables()]). Opens the Sampling and Export tabs.
 #' @param output_dir Folder of the validation round: the clips, the
@@ -63,6 +69,16 @@
 #'   `source_audio`), or the path to its CSV: needed by
 #'   `"random_recordings"` and, in the export, to keep the occasions
 #'   without detections (see [export_occupancy_data()]).
+#' @param audio_dir Optional folder of the recordings, subfolders included.
+#'   Every recording is listed with [list_recordings()] and written to the
+#'   `recordings` CSV when it is a path, or else to
+#'   `<output_dir>/recordings.csv`; the list is used as `recordings`.
+#'   Can also be chosen in the app (Intro > Audio panel).
+#' @param site_pattern Optional regular expression with one capture group
+#'   that takes the site from the file names, when the recordings or the
+#'   selection tables of several sites share a folder (see
+#'   [list_recordings()] and [read_selection_tables()]). Can also be set in
+#'   the Audio panel.
 #' @param classifier Label of the classifier, recorded in
 #'   `extraction_info.csv` and `schema.json`.
 #' @param launch.browser Open the app in the browser? Passed to
@@ -84,53 +100,32 @@
 #'         max_freq = 8)
 #' }
 run_app <- function(manifest = NULL, clips_dir = NULL, verdicts_file = NULL,
-                    reviewer = NULL, max_freq = NULL, selection_dir = NULL,
-                    output_dir = NULL, recordings = NULL, classifier = NULL,
+                    reviewer = NULL, max_freq = 12, selection_dir = NULL,
+                    output_dir = NULL, recordings = NULL, audio_dir = NULL,
+                    site_pattern = NULL, classifier = NULL,
                     launch.browser = interactive(), ...) {
   require_suggested("shiny", "to run the review app")
   require_suggested("av", "to draw the spectrograms")
-  if (!is.null(selection_dir) && is.null(output_dir)) {
-    stop("Give `output_dir` with `selection_dir`: the clips and the ",
-         "verdicts are written there.", call. = FALSE)
+  if (!is.null(manifest) && is.null(clips_dir) && is.null(output_dir)) {
+    stop("Give `clips_dir` with `manifest`, or `output_dir`.", call. = FALSE)
   }
-  if (!is.null(output_dir)) {
-    if (is.null(clips_dir)) clips_dir <- file.path(output_dir, "clips")
-    if (is.null(verdicts_file)) {
-      verdicts_file <- file.path(output_dir, "verdicts.csv")
-    }
-    caminho <- file.path(output_dir, "clip_manifest.csv")
-    if (is.null(manifest) && file.exists(caminho)) manifest <- caminho
+  if (!is.null(manifest) && !is.character(manifest) &&
+      is.null(verdicts_file) && is.null(output_dir)) {
+    stop("Give `verdicts_file` when `manifest` is a data frame.",
+         call. = FALSE)
   }
-  if (is.null(selection_dir) && (is.null(manifest) || is.null(clips_dir))) {
-    stop("Give `manifest` and `clips_dir`, or `selection_dir` and ",
-         "`output_dir` to draw the clips in the app.", call. = FALSE)
+  st <- app_state(manifest = manifest, clips_dir = clips_dir,
+                  verdicts_file = verdicts_file, reviewer = reviewer,
+                  max_freq = max_freq, selection_dir = selection_dir,
+                  output_dir = output_dir, recordings = recordings,
+                  audio_dir = audio_dir, site_pattern = site_pattern,
+                  classifier = classifier)
+  load_app_state(st)
+  if (!is.null(st$fila)) {
+    message(nrow(st$fila), " clip(s) to review; verdicts written to ",
+            st$verdicts_file, ".")
   }
-  if (is.null(verdicts_file)) {
-    if (!is.character(manifest)) {
-      stop("Give `verdicts_file` when `manifest` is a data frame.",
-           call. = FALSE)
-    }
-    verdicts_file <- file.path(dirname(manifest), "verdicts.csv")
-  }
-  fila <- if (is.null(manifest)) NULL else
-    review_queue(manifest, clips_dir, reviewer)
-  if (!is.null(fila)) {
-    message(nrow(fila), " clip(s) to review; verdicts written to ",
-            verdicts_file, ".")
-  }
-  detections <- NULL
-  if (!is.null(selection_dir)) {
-    detections <- read_selection_tables(selection_dir)
-    if (is.character(recordings)) {
-      recordings <- read_csv(recordings, show_col_types = FALSE)
-    }
-  }
-  shiny::runApp(review_app(fila, clips_dir, verdicts_file, reviewer,
-                           max_freq, detections = detections,
-                           selection_dir = selection_dir,
-                           output_dir = output_dir, recordings = recordings,
-                           classifier = classifier),
-                launch.browser = launch.browser, ...)
+  shiny::runApp(review_app(st), launch.browser = launch.browser, ...)
 }
 
 #' Verdicts of the review app
@@ -293,89 +288,173 @@ last_verdicts <- function(log) {
     select(-.ordem)
 }
 
+# Paletas do espectrograma: rotulo -> paleta de grDevices::hcl.colors()
+spectrogram_palettes <- c("Gray" = "Grays", "Viridis" = "Viridis",
+                          "Inferno" = "Inferno", "Mako" = "Mako",
+                          "Heat" = "Heat")
+spectrogram_fft <- c(256L, 512L, 1024L, 2048L)
+
 # Espectrograma de um clipe (av), com margens pequenas para caber no app.
-# O av devolve valores menores onde o som e mais forte, entao a escala de
-# cinza vai do preto (forte) ao branco (silencio)
-plot_spectrogram <- function(path, max_freq = NULL) {
-  x <- av::read_audio_fft(path)
+# O av devolve valores menores onde o som e mais forte: no cinza, o som
+# forte fica preto sobre o branco; nas paletas de cor, fica claro sobre o
+# escuro. `fft`: tamanho da janela de Hann; `overlap`: sobreposicao.
+plot_spectrogram <- function(path, max_freq = NULL, fft = 1024L,
+                             overlap = 0.9, palette = "Gray",
+                             brightness = 0, contrast = 1) {
+  x <- av::read_audio_fft(path, window = av::hanning(fft),
+                          overlap = overlap)
   freq <- attr(x, "frequency") / 1000
   manter <- if (is.null(max_freq)) TRUE else freq <= max_freq
   z <- t(x[manter, , drop = FALSE])
-  # contraste: a metade mais silenciosa dos pixels fica branca
+  # escala de 0 (som mais forte) a 1 (silencio): a metade mais silenciosa
+  # dos pixels fica no fundo. O contraste estica a escala em torno do meio;
+  # o brilho clareia a imagem (no cinza, vai para o branco; nas paletas de
+  # cor, para a ponta clara, a do som forte).
   teto <- stats::quantile(z, 0.5, names = FALSE)
+  piso <- min(z)
+  v <- if (teto > piso) (pmin(z, teto) - piso) / (teto - piso) else z * 0
+  v <- (v - 0.5) * contrast + 0.5
+  v <- v + if (identical(palette, "Gray")) brightness else -brightness
+  v <- pmin(pmax(v, 0), 1)
   op <- graphics::par(mar = c(4, 4, 0.5, 0.5))
   on.exit(graphics::par(op))
-  graphics::image(attr(x, "time"), freq[manter], pmin(z, teto),
-                  col = grDevices::gray.colors(64, start = 0, end = 1),
+  # o topo do eixo e o pedido, nao a ultima faixa de frequencia do FFT
+  topo <- if (is.null(max_freq)) max(freq) else min(max_freq, max(freq))
+  graphics::image(attr(x, "time"), freq[manter], v, zlim = c(0, 1),
+                  ylim = c(0, topo), col = spectrogram_colours(palette),
                   xlab = "Time (s)", ylab = "Frequency (kHz)",
                   useRaster = TRUE)
+  # regiao do grafico e eixos, para a linha que acompanha o audio
+  invisible(list(plt = graphics::par("plt"), usr = graphics::par("usr")))
+}
+
+# Linha tracejada que acompanha o audio sobre o espectrograma. O servidor
+# manda a regiao do grafico (fracoes da imagem) e o intervalo de tempo.
+playhead_js <- "
+$(function() {
+  var cfg = {};
+  Shiny.addCustomMessageHandler('sheepdog-playhead', function(m) {
+    cfg[m.line] = m;
+  });
+  function step() {
+    for (var id in cfg) {
+      var m = cfg[id], line = document.getElementById(id);
+      if (!line) continue;
+      var img = line.parentElement.querySelector('img');
+      var au = document.querySelector('#' + m.player + ' audio');
+      if (!img || !au || !img.clientWidth) { line.style.display = 'none'; continue; }
+      var f = (au.currentTime - m.t0) / (m.t1 - m.t0);
+      f = Math.max(0, Math.min(1, f));
+      var W = img.clientWidth, H = img.clientHeight;
+      line.style.left = (img.offsetLeft + W * (m.plt[0] + f * (m.plt[1] - m.plt[0]))) + 'px';
+      line.style.top = (img.offsetTop + H * (1 - m.plt[3])) + 'px';
+      line.style.height = (H * (m.plt[3] - m.plt[2])) + 'px';
+      line.style.borderLeftColor = m.colour || '#d62728';
+      line.style.display = 'block';
+    }
+    window.requestAnimationFrame(step);
+  }
+  window.requestAnimationFrame(step);
+});"
+
+spectrogram_colours <- function(palette = "Gray") {
+  if (identical(palette, "Gray") || !palette %in% names(spectrogram_palettes)) {
+    return(grDevices::gray.colors(64, start = 0, end = 1))
+  }
+  # o som forte (valores baixos) recebe a ponta clara da paleta
+  grDevices::hcl.colors(64, spectrogram_palettes[[palette]], rev = TRUE)
 }
 
 # Teclas do app
 review_keys <- c(p = "positive", n = "negative", u = "uncertain")
 
+# Interface do app a partir do estado: so a revisao, ou as abas Intro,
+# Sampling, Review e Export (as duas do meio pedem as pastas quando faltam)
+app_ui <- function(st) {
+  titulo <- paste0("sheepdog", if (!is.null(st$reviewer))
+    paste0(" (", st$reviewer, ")"))
+  if (st$review_only) {
+    return(shiny::fluidPage(title = "sheepdog review",
+                            shiny::titlePanel(paste0(titulo,
+                                                     ": clip review")),
+                            review_ui("review", st$max_freq)))
+  }
+  pronto <- app_ready(st)
+  shiny::navbarPage(
+    titulo, id = "tabs", selected = if (is.null(st$fila)) "Intro" else
+      "Review",
+    shiny::tabPanel("Intro", intro_ui(st)),
+    shiny::tabPanel("Sampling", if (pronto) {
+      sampling_ui("sampling", st$detections, st$audio_dir)
+    } else needs_folders_ui()),
+    shiny::tabPanel("Review", review_ui("review", st$max_freq)),
+    shiny::tabPanel("Export", if (pronto) {
+      export_ui("export", st$output_dir)
+    } else needs_folders_ui()))
+}
+
 # O app: interface e servidor. Sem `detections`, so a aba de revisao
-review_app <- function(fila, clips_dir, verdicts_file, reviewer,
-                       max_freq = NULL, detections = NULL,
-                       selection_dir = NULL, output_dir = NULL,
-                       recordings = NULL, classifier = NULL) {
+review_app <- function(st) {
   recurso <- "sheepdog_clips"
-  dir.create(clips_dir, recursive = TRUE, showWarnings = FALSE)
-  shiny::addResourcePath(recurso, normalizePath(clips_dir))
   shiny::addResourcePath("sheepdog_app",
                          system.file("app", package = "sheepdog"))
-  completo <- !is.null(detections)
-  titulo <- paste0("sheepdog", if (!is.null(reviewer)) paste0(" (", reviewer,
-                                                               ")"))
-  ui <- if (!completo) {
-    shiny::fluidPage(title = "sheepdog review",
-                     shiny::titlePanel(paste0(titulo, ": clip review")),
-                     review_ui("review"))
-  } else {
-    shiny::navbarPage(
-      titulo, id = "tabs", selected = if (is.null(fila)) "Intro" else
-        "Review",
-      shiny::tabPanel("Intro", intro_ui()),
-      shiny::tabPanel("Sampling", sampling_ui("sampling", detections)),
-      shiny::tabPanel("Review", review_ui("review")),
-      shiny::tabPanel("Export", export_ui("export", output_dir)))
+  registrar_clipes <- function() {
+    if (is.null(st$clips_dir)) return(invisible())
+    dir.create(st$clips_dir, recursive = TRUE, showWarnings = FALSE)
+    shiny::addResourcePath(recurso, normalizePath(st$clips_dir))
   }
+  registrar_clipes()
+  # a interface e montada a cada carga da pagina, a partir do estado
+  ui <- function(req) app_ui(st)
   server <- function(input, output, session) {
-    fila_r <- shiny::reactiveVal(fila)
-    if (completo) {
-      cortes <- sampling_server("sampling", detections, selection_dir,
-                                output_dir, recordings, classifier)
+    fila_r <- shiny::reactiveVal(st$fila)
+    if (!st$review_only) {
+      setup_server("setup", st, session, registrar_clipes)
+      confirm_folders(st, input, session)
+    }
+    if (!st$review_only && app_ready(st)) {
+      output_dir <- st$output_dir
+      cortes <- sampling_server("sampling", st$detections, st$selection_dir,
+                                output_dir, st$recordings, st$classifier,
+                                audio_listed = st$audio_dir)
       # clipes recem-cortados vao para a fila da revisao
       shiny::observeEvent(cortes(), {
         q <- tryCatch(
           review_queue(file.path(output_dir, "clip_manifest.csv"),
-                       clips_dir, reviewer),
+                       st$clips_dir, st$reviewer),
           error = function(e) {
             shiny::showNotification(conditionMessage(e), type = "warning",
                                     duration = NULL)
             NULL
           })
         fila_r(q)
+        st$fila <- q
         if (!is.null(q)) shiny::updateNavbarPage(session, "tabs", "Review")
       }, ignoreInit = TRUE)
-      export_server("export", detections, output_dir, clips_dir,
-                    verdicts_file, recordings, classifier)
+      export_server("export", st$detections, output_dir, st$clips_dir,
+                    st$verdicts_file, st$recordings, st$classifier)
     }
-    review_server("review", fila_r, verdicts_file, reviewer, recurso,
-                  max_freq)
+    review_server("review", fila_r, st$verdicts_file, st$reviewer, recurso,
+                  st$max_freq)
   }
   shiny::shinyApp(ui = ui, server = server)
 }
 
-review_ui <- function(id) {
+review_ui <- function(id, max_freq = 12) {
   ns <- shiny::NS(id)
   teclas <- sprintf(
     "document.addEventListener('keydown', function(e) {
        if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+       if (e.key === ' ') {
+         var au = document.querySelector('#%s audio');
+         if (au) { e.preventDefault(); if (au.paused) au.play(); else au.pause(); }
+         return;
+       }
        Shiny.setInputValue('%s', e.key, {priority: 'event'});
-     });", ns("key"))
+     });", ns("player"), ns("key"))
   shiny::tagList(
     shiny::tags$head(shiny::tags$script(shiny::HTML(teclas)),
+                     shiny::tags$script(shiny::HTML(playhead_js)),
                      shiny::tags$style(shiny::HTML(
                        paste("td { white-space: nowrap; }",
                              "td + td { white-space: normal;",
@@ -392,11 +471,36 @@ review_ui <- function(id) {
         shiny::hr(),
         shiny::tableOutput(ns("info")),
         shiny::helpText("Keys: p positive, n negative, u uncertain,",
-                        "right arrow or space next, left arrow previous.")
+                        "right arrow next, left arrow previous, space play or pause.")
       ),
       shiny::mainPanel(
         width = 9,
-        shiny::plotOutput(ns("spectrogram"), height = "320px"),
+        shiny::h4(shiny::textOutput(ns("position"), inline = TRUE),
+                  style = "margin-top: 0;"),
+        shiny::fluidRow(
+          shiny::column(2, shiny::selectInput(
+            ns("palette"), "Palette", names(spectrogram_palettes))),
+          shiny::column(2, shiny::selectInput(
+            ns("fft"), "FFT window", spectrogram_fft, selected = 1024L)),
+          shiny::column(2, shiny::numericInput(
+            ns("max_freq"), "Max. kHz",
+            if (is.null(max_freq)) NA else max_freq, min = 0.5, step = 0.5)),
+          shiny::column(3, shiny::sliderInput(
+            ns("brightness"), "Brightness", min = -50, max = 50, value = 0,
+            step = 5, post = "%", ticks = FALSE)),
+          shiny::column(3, shiny::sliderInput(
+            ns("contrast"), "Contrast", min = 25, max = 300, value = 100,
+            step = 25, post = "%", ticks = FALSE))),
+        shiny::fluidRow(shiny::column(12, hint(
+          "FFT window in samples, with 90% overlap: larger windows sharpen",
+          "the frequency and blur the time. Max. kHz is the top of the",
+          "plot; empty shows the whole band."))),
+        shiny::div(
+          style = "position: relative;",
+          shiny::plotOutput(ns("spectrogram"), height = "320px"),
+          shiny::div(id = ns("playhead"), style = paste(
+            "position: absolute; display: none; width: 0;",
+            "border-left: 1px dashed #d62728; pointer-events: none;"))),
         shiny::uiOutput(ns("player")),
         shiny::br(),
         shiny::actionButton(ns("positive"), "Positive (p)",
@@ -490,13 +594,21 @@ review_server <- function(id, fila, verdicts_file, reviewer, recurso = "",
       k <- tolower(input$key)
       if (k %in% names(review_keys)) {
         marcar(review_keys[[k]])
-      } else if (k %in% c("arrowright", " ")) {
+      } else if (k == "arrowright") {
         proximo(1)
       } else if (k == "arrowleft") {
         proximo(-1)
       }
     })
 
+    output$position <- shiny::renderText({
+      i <- atual()
+      feitos <- sum(chave() %in% names(vereditos()))
+      n <- nrow(tab())
+      if (is.na(i)) return(paste0(feitos, " of ", n, " clips reviewed"))
+      paste0("Clip ", i, " of ", n, "  |  ", feitos, " of ", n,
+             " clips reviewed")
+    })
     output$progress <- shiny::renderText({
       feitos <- sum(chave() %in% names(vereditos()))
       paste0(feitos, " of ", nrow(tab()), " clips reviewed")
@@ -526,7 +638,22 @@ review_server <- function(id, fila, verdicts_file, reviewer, recurso = "",
     output$spectrogram <- shiny::renderPlot({
       i <- atual()
       shiny::req(!is.na(i), file.exists(tab()$path[i]))
-      plot_spectrogram(tab()$path[i], max_freq)
+      teto <- if (is.null(input$max_freq)) max_freq else input$max_freq
+      if (is.null(teto) || is.na(teto) || teto <= 0) teto <- NULL
+      fft <- suppressWarnings(as.integer(input$fft))
+      if (length(fft) == 0 || is.na(fft)) fft <- 1024L
+      pct <- function(x, padrao) if (is.null(x) || is.na(x)) padrao else
+        x / 100
+      g <- plot_spectrogram(tab()$path[i], teto, fft = fft, overlap = 0.9,
+                            palette = if (is.null(input$palette)) "Gray" else
+                              input$palette,
+                            brightness = pct(input$brightness, 0),
+                            contrast = pct(input$contrast, 1))
+      session$sendCustomMessage("sheepdog-playhead", list(
+        line = session$ns("playhead"), player = session$ns("player"),
+        plt = g$plt, t0 = g$usr[1], t1 = g$usr[2],
+        colour = if (identical(input$palette, "Gray") ||
+                     is.null(input$palette)) "#d62728" else "#ffffff"))
     })
     output$player <- shiny::renderUI({
       i <- atual()
@@ -543,21 +670,22 @@ review_server <- function(id, fila, verdicts_file, reviewer, recurso = "",
   })
 }
 
-# Presets de estratos de select_clips()
 # Aba de abertura: a figura que resume os modos de amostragem
-intro_ui <- function() {
-  shiny::fluidRow(shiny::column(
-    12,
-    shiny::h3("How sheepdog picks the clips you review"),
-    shiny::p("Each panel shows one night of 30-minute recordings (simulated",
-             "scores) and which clips each sampling mode and occasion would",
-             "give. Choose the design in the Sampling tab, review the clips",
-             "in the Review tab and write the occupancy tables in the",
-             "Export tab."),
-    shiny::tags$img(src = "sheepdog_app/intro.png",
-                    alt = "Sampling modes, occasions and strata of sheepdog",
-                    style = "max-width: 100%; height: auto;")
-  ))
+intro_ui <- function(st) {
+  shiny::navlistPanel(
+    id = "intro_nav", widths = c(2, 10), well = FALSE,
+    shiny::tabPanel(
+      "Graphical abstract",
+      shiny::h3("How sheepdog picks the clips you review"),
+      shiny::p("Each panel shows one night of 30-minute recordings",
+               "(simulated scores) and which clips each sampling mode and",
+               "occasion would give. Choose the design in the Sampling tab,",
+               "review the clips in the Review tab and write the occupancy",
+               "tables in the Export tab."),
+      shiny::tags$img(src = "sheepdog_app/intro.png",
+                      alt = "Sampling modes, occasions and strata of sheepdog",
+                      style = "max-width: 100%; height: auto;")),
+    shiny::tabPanel("Audio panel", setup_ui("setup", st)))
 }
 
 # Texto curto, cinza, sob o titulo de um campo
@@ -574,10 +702,11 @@ threshold_label <- function(mode) {
          ")")
 }
 
+# Presets de estratos de select_clips()
 strata_presets <- c("night_hour", "night", "hour", "week", "month",
                     "site_species")
 
-sampling_ui <- function(id, detections) {
+sampling_ui <- function(id, detections, audio_dir = NULL) {
   ns <- shiny::NS(id)
   sites <- sort(unique(as.character(detections$site)))
   especies <- sort(unique(str_extract(detections$species_code, "[^_]+$")))
@@ -646,6 +775,11 @@ sampling_ui <- function(id, detections) {
       shiny::textInput(ns("remap_to"), "to"),
       hint("If the recordings moved since BirdNET ran, replace the start of",
            "their paths, e.g. N:/ by /Volumes/Arara/."),
+      shiny::textInput(ns("audio_dir"), "Audio folder (optional)",
+                       if (is.null(audio_dir)) "" else audio_dir),
+      hint("Folder of the recordings (subfolders included). The app checks",
+           "the audio paths after each draw; when some are missing, it",
+           "looks for the files here by name and offers to use them."),
       shiny::actionButton(ns("draw"), "Draw", class = "btn-primary"),
       shiny::hr(),
       shiny::checkboxInput(ns("simulate"),
@@ -659,11 +793,11 @@ sampling_ui <- function(id, detections) {
     shiny::mainPanel(
       width = 8,
       shiny::uiOutput(ns("notes")),
-      shiny::h4("Clips per site and species"),
+      shiny::uiOutput(ns("counts_title")),
       shiny::tableOutput(ns("counts")),
-      shiny::h4("Inclusion probability per species"),
+      shiny::uiOutput(ns("inclusion_title")),
       shiny::tableOutput(ns("inclusion")),
-      shiny::h4("Cutting"),
+      shiny::uiOutput(ns("cut_title")),
       shiny::tableOutput(ns("cut_status"))
     )
   )
@@ -708,9 +842,105 @@ with_notes <- function(expr) {
   list(value = valor, notes = notas)
 }
 
+# Confere se as gravacoes existem e procura as ausentes, pelo nome do
+# arquivo, em `audio_dir` (com subpastas). `found` liga cada caminho ausente
+# ao achado; nomes repetidos em `audio_dir` ficam de fora (ambiguos).
+# `remap` e o par de pastas quando um so explica todos os achados.
+# `files`: os arquivos de `audio_dir`, quando ja listados (ex. pela aba Audio
+# panel), para nao varrer a pasta de novo a cada sorteio.
+locate_audio <- function(paths, audio_dir = NULL,
+                         audio_pattern = "\\.(wav|flac|mp3)$",
+                         files = NULL) {
+  paths <- unique(paths[!is.na(paths) & nzchar(paths)])
+  ausentes <- paths[!file.exists(paths)]
+  achados <- character()
+  remap <- NULL
+  if (!is.null(audio_dir)) audio_dir <- sub("/+$", "", path.expand(audio_dir))
+  if (length(ausentes) > 0 && !is.null(audio_dir) && nzchar(audio_dir) &&
+      dir.exists(audio_dir)) {
+    arquivos <- if (!is.null(files)) files else
+      list.files(audio_dir, audio_pattern, recursive = TRUE,
+                 full.names = TRUE, ignore.case = TRUE)
+    arquivos <- str_replace_all(arquivos, fixed("\\"), "/")
+    nomes <- basename(arquivos)
+    unicos <- !(duplicated(nomes) | duplicated(nomes, fromLast = TRUE))
+    idx <- match(basename(ausentes), nomes[unicos])
+    achados <- stats::setNames(arquivos[unicos][idx[!is.na(idx)]],
+                               ausentes[!is.na(idx)])
+    if (length(achados) > 0) {
+      pares <- unique(paste(dirname(names(achados)), dirname(achados),
+                            sep = "\r"))
+      if (length(pares) == 1) {
+        remap <- paste0(strsplit(pares, "\r", fixed = TRUE)[[1]], "/")
+      }
+    }
+  }
+  list(n = length(paths), missing = ausentes, found = achados,
+       remap = remap)
+}
+
+# Os arquivos ja listados de `listed_dir` servem para `audio_dir`? So quando
+# as duas pastas sao a mesma
+listed_files <- function(audio_dir, listed_dir, recordings) {
+  mesma <- function(d) {
+    if (is.null(d) || !nzchar(d) || !dir.exists(path.expand(d))) {
+      return(NA_character_)
+    }
+    normalizePath(path.expand(d), winslash = "/")
+  }
+  a <- mesma(audio_dir)
+  if (is.null(recordings) || is.na(a) || !identical(a, mesma(listed_dir))) {
+    return(NULL)
+  }
+  as.character(recordings$source_audio)
+}
+
+# Aviso, apos o sorteio, sobre as gravacoes achadas ou ausentes
+audio_note <- function(chk, audio_dir) {
+  dado <- !is.null(audio_dir) && nzchar(audio_dir)
+  if (length(chk$missing) == 0) {
+    return(paste0("All ", chk$n, " recordings of the draw were found."))
+  }
+  if (dado && !dir.exists(path.expand(audio_dir))) {
+    return(paste0("The audio folder ", audio_dir, " does not exist."))
+  }
+  if (length(chk$found) > 0) return(character())
+  paste0(length(chk$missing), " of ", chk$n, " recordings of the draw ",
+         "were not found (e.g. ", chk$missing[1], "). ",
+         if (dado) paste0("They are not in ", audio_dir, " either.")
+         else paste("Give the folder of the recordings in \"Audio folder\"",
+                    "or fill the remap fields, and draw again."))
+}
+
+# Pergunta se o manifesto deve usar as gravacoes achadas em `audio_dir`
+relocate_dialog <- function(chk, audio_dir, ns) {
+  de <- names(chk$found)[1]
+  shiny::modalDialog(
+    title = "Use the recordings of the audio folder?",
+    shiny::p(length(chk$missing), " of ", chk$n, " recordings of the draw ",
+             "are not where the selection tables say. ",
+             length(chk$found), " of them were found in ", audio_dir, "."),
+    shiny::p("For example:"),
+    shiny::tags$ul(
+      shiny::tags$li("selection tables: ", shiny::code(de)),
+      shiny::tags$li("audio folder: ", shiny::code(chk$found[[1]]))),
+    if (!is.null(chk$remap)) {
+      shiny::p("That is, ", shiny::code(chk$remap[1]), " becomes ",
+               shiny::code(chk$remap[2]), ".")
+    },
+    shiny::p("The manifest keeps the BirdNET path in ", shiny::code("begin_path"),
+             " and uses the new one in ", shiny::code("source_audio"), "."),
+    footer = shiny::tagList(
+      shiny::modalButton("Keep the paths"),
+      shiny::actionButton(ns("relocate"), "Use the audio folder",
+                          class = "btn-primary")),
+    easyClose = FALSE)
+}
+
 # Devolve um reativo que muda a cada corte (o app recarrega a fila)
 sampling_server <- function(id, detections, selection_dir, output_dir,
-                            recordings = NULL, classifier = NULL) {
+                            recordings = NULL, classifier = NULL,
+                            audio_listed = NULL) {
   shiny::moduleServer(id, function(input, output, session) {
     selecao <- shiny::reactiveVal(NULL)
     args_r <- shiny::reactiveVal(NULL)
@@ -721,6 +951,8 @@ sampling_server <- function(id, detections, selection_dir, output_dir,
                                 label = threshold_label(input$mode))
     })
     cortes <- shiny::reactiveVal(0L)
+    audio <- shiny::reactiveVal(NULL)       # resultado de locate_audio()
+    realocadas <- shiny::reactiveVal(NULL)  # gravacoes trocadas de pasta
 
     shiny::observeEvent(input$draw, {
       args <- sampling_args(input)
@@ -742,8 +974,38 @@ sampling_server <- function(id, detections, selection_dir, output_dir,
       args$recordings <- NULL
       selecao(r$value)
       args_r(args)
-      notas(r$notes)
       status(NULL)
+      realocadas(NULL)
+      audio(NULL)
+      if (!is.null(r$value) && nrow(r$value) > 0) {
+        chk <- locate_audio(r$value$source_audio, input$audio_dir,
+                            files = listed_files(input$audio_dir,
+                                                 audio_listed, recordings))
+        audio(chk)
+        r$notes <- c(r$notes, audio_note(chk, input$audio_dir))
+        if (length(chk$found) > 0) {
+          shiny::showModal(relocate_dialog(chk, input$audio_dir,
+                                           session$ns))
+        }
+      }
+      notas(r$notes)
+    })
+
+    shiny::observeEvent(input$relocate, {
+      chk <- audio()
+      sel <- selecao()
+      shiny::removeModal()
+      if (is.null(chk) || is.null(sel)) return()
+      idx <- match(sel$source_audio, names(chk$found))
+      sel$source_audio[!is.na(idx)] <- unname(chk$found[idx[!is.na(idx)]])
+      selecao(sel)
+      realocadas(list(dir = input$audio_dir, n = length(chk$found),
+                      remap = chk$remap))
+      falta <- length(chk$missing) - length(chk$found)
+      notas(c(
+        paste0(length(chk$found), " recording(s) now read from ",
+               input$audio_dir, "; the manifest will use these paths."),
+        if (falta > 0) paste0(falta, " recording(s) are still missing.")))
     })
 
     shiny::observeEvent(input$cut, {
@@ -761,16 +1023,28 @@ sampling_server <- function(id, detections, selection_dir, output_dir,
       }
       simular <- isTRUE(input$simulate)
       r <- with_notes(cut_clips(sel, output_dir, simulate = simular))
+      nenhum <- all(r$value$status == "audio_not_found")
       if (!simular) {
         write_csv(r$value, caminho)
-        write_csv(extraction_info(selection_dir, classifier, simular,
-                                  args_r()),
-                  file.path(output_dir, "extraction_info.csv"))
+        info <- extraction_info(selection_dir, classifier, simular, args_r())
+        re <- realocadas()
+        if (!is.null(re)) {
+          info <- bind_rows(info, tibble(
+            key = c("audio_dir", "recordings_relocated"),
+            value = c(re$dir, as.character(re$n))))
+        }
+        write_csv(info, file.path(output_dir, "extraction_info.csv"))
         r$notes <- c(r$notes, paste("Manifest written to", caminho))
+      }
+      if (nenhum) {
+        r$notes <- c(r$notes, paste(
+          "No recording was found, so no clip was cut. Give the folder of",
+          "the recordings in \"Audio folder\" (or fill the remap fields),",
+          "draw again and cut with \"Replace\" ticked."))
       }
       notas(r$notes)
       status(count(r$value, species_folder, status))
-      if (!simular) cortes(cortes() + 1L)
+      if (!simular && !nenhum) cortes(cortes() + 1L)
     })
 
     output$notes <- shiny::renderUI({
@@ -778,6 +1052,20 @@ sampling_server <- function(id, detections, selection_dir, output_dir,
       if (length(n) == 0) return(NULL)
       shiny::div(class = "alert alert-info",
                  lapply(n, function(x) shiny::p(x)))
+    })
+    # os titulos so aparecem com a tabela
+    output$counts_title <- shiny::renderUI({
+      shiny::req(selecao(), nrow(selecao()) > 0)
+      shiny::h4("Clips per site and species")
+    })
+    output$inclusion_title <- shiny::renderUI({
+      sel <- selecao()
+      shiny::req(sel, nrow(sel) > 0, any(!is.na(sel$inclusion_prob)))
+      shiny::h4("Inclusion probability per species")
+    })
+    output$cut_title <- shiny::renderUI({
+      shiny::req(status())
+      shiny::h4("Cutting")
     })
     output$counts <- shiny::renderTable({
       sel <- selecao()
@@ -823,8 +1111,7 @@ export_ui <- function(id, output_dir) {
       shiny::checkboxInput(ns("overwrite"), "Overwrite an existing export"),
       hint("Replaces an earlier export in this folder."),
       shiny::actionButton(ns("export"), "Export", class = "btn-primary"),
-      shiny::helpText("Use the occasion of the clip extraction. The score",
-                      "calibration is not in the app yet: call",
+      shiny::helpText("The score calibration is not in the app yet: call",
                       "export_occupancy_data() with `fit` for it.")
     ),
     shiny::mainPanel(

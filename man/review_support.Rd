@@ -15,7 +15,8 @@ review_support(
   covariates = NULL,
   occasion_unit = c("file", "minute"),
   remap_from = NULL,
-  remap_to = NULL
+  remap_to = NULL,
+  weighted = NULL
 )
 }
 \arguments{
@@ -51,6 +52,9 @@ whole recording) or \code{"minute"} (minute of the file, from
 \item{remap_from, remap_to}{Replace the prefix \code{remap_from} of the
 \code{begin_path} paths by \code{remap_to}, e.g. \code{"N:/"} and \code{"/Volumes/Arara/"}.
 Backslashes are turned into forward slashes first.}
+
+\item{weighted}{Passed to \code{\link[=suggest_thresholds]{suggest_thresholds()}}, so that \code{"reached"}
+follows the same rule. \code{prec_high} stays unweighted.}
 }
 \value{
 A tibble with \code{site}, \code{species_folder}, the \code{by} columns,

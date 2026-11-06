@@ -98,6 +98,12 @@ weighted_precision <- function(verdict, prob) {
   sum(w[verdict == "positive"]) / sum(w)
 }
 
+# Tamanho efetivo da amostra de Kish, com pesos 1 / inclusion_prob
+kish_n <- function(prob) {
+  w <- 1 / as.numeric(prob)
+  sum(w)^2 / sum(w^2)
+}
+
 #' Precision by confidence bin
 #'
 #' Precision (share of positive verdicts) of the reviewed clips, by site,
@@ -161,27 +167,55 @@ precision_by_bin <- function(validation, bins = seq(0.1, 1, by = 0.1),
 #' and are numerous. [calibrated_thresholds()] derives the thresholds from
 #' the calibration model of stage 2 instead.
 #'
-#' The threshold is chosen from the unweighted precision. With
-#' `inclusion_prob` in `validation`, the table also gives
-#' `precision_weighted_at_threshold`, the precision at the threshold
-#' weighted by `1 / inclusion_prob`, as in [precision_by_bin()].
+#' **Design weights.** Clips of `"random_detections"` have unequal
+#' `inclusion_prob`: quiet strata are reviewed almost in full and choruses
+#' lightly. The plain share of positive clips then estimates the precision
+#' of the reviewed sample, not that of the predictions kept by the cut. So,
+#' by default, a cell whose clips all have `inclusion_prob` is judged by the
+#' precision weighted by `1 / inclusion_prob`, as in [precision_by_bin()],
+#' and `min_n` applies to Kish's effective sample size,
+#' \eqn{(\sum w)^2 / \sum w^2}, so that a cut resting on a few heavily
+#' weighted clips is not accepted. With equal inclusion probabilities, both
+#' choices give the same threshold. The weights cost variance: when
+#' precision does not vary between strata, the unweighted estimate is also
+#' unbiased and less variable (`weighted = FALSE`).
+#'
+#' A cell that mixes clips with and without `inclusion_prob` (`"top"` and
+#' `"random_detections"`, say) cannot be weighted: it gets the unweighted
+#' precision, with a warning, since `"top"` clips are not a probability
+#' sample and should not set thresholds.
 #'
 #' @inheritParams precision_by_bin
 #' @param target_precision Target precision.
+#' @param weighted Which precision chooses the cut. `NULL` (default): the
+#'   weighted one in the cells whose clips all have `inclusion_prob`, the
+#'   unweighted one elsewhere. `TRUE`: always the weighted one; cells with
+#'   clips without `inclusion_prob` get no threshold, with a warning, and
+#'   it is an error if no clip has it. `FALSE`: always the unweighted one,
+#'   and `n_support` for `min_n`.
 #'
 #' @return A tibble with `site`, `species_folder`, the `by` columns,
-#'   `threshold`, `n_support`, `precision_at_threshold` (`NA` when no
-#'   cut reaches the target) and `precision_weighted_at_threshold` (only
-#'   with `inclusion_prob`). Without any reviewed clip with a confidence,
-#'   the tibble has no rows.
+#'   `threshold`, `n_support`, `precision_at_threshold` (unweighted; `NA`
+#'   when no cut reaches the target). With `inclusion_prob`, also
+#'   `precision_weighted_at_threshold`, `n_eff` (Kish's effective sample
+#'   size at the threshold) and `precision_used` (`"weighted"` or
+#'   `"unweighted"`, the precision that chose the cut). Without any
+#'   reviewed clip with a confidence, the tibble has no rows.
 #' @seealso [calibrated_thresholds()] for thresholds from the calibration
 #'   model.
 #' @export
 suggest_thresholds <- function(validation, target_precision = 0.90,
-                               min_n = 15, by = NULL) {
+                               min_n = 15, by = NULL, weighted = NULL) {
   check_by(validation, by)
+  if (!is.null(weighted) && !(isTRUE(weighted) || isFALSE(weighted))) {
+    stop("`weighted` must be NULL, TRUE or FALSE.", call. = FALSE)
+  }
   validados <- reviewed_with_confidence(validation)
   pesos <- has_inclusion_prob(validados)
+  if (isTRUE(weighted) && nrow(validados) > 0 && !pesos) {
+    stop("`weighted = TRUE` needs `inclusion_prob`, which no reviewed clip ",
+         "has.", call. = FALSE)
+  }
   # sem clipes com confidence, group_modify() criaria uma linha toda NA
   # (era o que a v1.2.0 escrevia)
   if (nrow(validados) == 0) {
@@ -191,9 +225,24 @@ suggest_thresholds <- function(validation, target_precision = 0.90,
                      tibble(threshold = numeric(), n_support = integer(),
                             precision_at_threshold = numeric())))
   }
-  validados |>
-    group_by(site, species_folder, across(all_of(by))) |>
-    group_modify(~ threshold_for(.x, target_precision, min_n, pesos)) |>
+  celulas <- group_by(validados, site, species_folder, across(all_of(by)))
+  if (pesos && !isFALSE(weighted)) {
+    mistas <- celulas |>
+      summarise(mista = anyNA(inclusion_prob) && !all(is.na(inclusion_prob)),
+                .groups = "drop") |>
+      pull(mista) |>
+      sum()
+    if (mistas > 0) {
+      warning(mistas, " cell(s) mix clips with and without `inclusion_prob` ",
+              "(\"top\" clips?), which are not a probability sample and ",
+              "should not set thresholds; ",
+              if (isTRUE(weighted)) "they get no threshold."
+              else "they use the unweighted precision.", call. = FALSE)
+    }
+  }
+  celulas |>
+    group_modify(~ threshold_for(.x, target_precision, min_n, pesos,
+                                 weighted)) |>
     ungroup()
 }
 
@@ -230,6 +279,8 @@ suggest_thresholds <- function(validation, target_precision = 0.90,
 #' @param min_precision Precision at high scores below which a cell is
 #'   `"unreliable"`.
 #' @param target_precision Target precision of [suggest_thresholds()].
+#' @param weighted Passed to [suggest_thresholds()], so that `"reached"`
+#'   follows the same rule. `prec_high` stays unweighted.
 #' @param by Optional columns that split each cell, e.g. `"temp_bin"`.
 #'   They must be columns of `covariates` (joined to both tables) or of
 #'   both tables.
@@ -252,7 +303,8 @@ review_support <- function(validation, detections, conf_high = 0.7,
                            target_precision = 0.90, by = NULL,
                            covariates = NULL,
                            occasion_unit = c("file", "minute"),
-                           remap_from = NULL, remap_to = NULL) {
+                           remap_from = NULL, remap_to = NULL,
+                           weighted = NULL) {
   unidade <- match.arg(occasion_unit)
   faltam <- setdiff(c("site", "species_code", "confidence", "begin_path",
                       "file_offset"), names(detections))
@@ -304,7 +356,8 @@ review_support <- function(validation, detections, conf_high = 0.7,
     group_by(across(all_of(celula))) |>
     summarise(n_high_all = sum(confidence >= conf_high), .groups = "drop")
   limiares <- suggest_thresholds(val, target_precision = target_precision,
-                                 min_n = min_n, by = by) |>
+                                 min_n = min_n, by = by,
+                                 weighted = weighted) |>
     select(all_of(celula), threshold)
 
   full_join(revisados, todas, by = celula) |>
@@ -342,22 +395,41 @@ check_by <- function(dados, by) {
 }
 
 # Menor corte c tal que a precisao entre os clipes com confidence >= c
-# atinge o alvo
-threshold_for <- function(df, alvo, n_min, pesos = FALSE) {
+# atinge o alvo. Com pesos, a precisao e o apoio da decisao sao os
+# ponderados nas celulas em que todo clipe tem inclusion_prob
+threshold_for <- function(df, alvo, n_min, pesos = FALSE, weighted = NULL) {
   cortes <- sort(unique(round(df$confidence, 2)))
   out <- tibble(threshold = NA_real_, n_support = NA_integer_,
                 precision_at_threshold = NA_real_)
-  if (pesos) out$precision_weighted_at_threshold <- NA_real_
+  if (pesos) {
+    out$precision_weighted_at_threshold <- NA_real_
+    out$n_eff <- NA_real_
+    out$precision_used <- NA_character_
+  }
+  completa <- pesos && !anyNA(df$inclusion_prob)
+  if (isTRUE(weighted) && !completa) return(out)
+  ponderar <- completa && !isFALSE(weighted)
   for (c0 in cortes) {
     sub <- filter(df, confidence >= c0)
-    if (nrow(sub) >= n_min &&
-        mean(sub$verdict == "positive") >= alvo) {
+    precisao <- if (ponderar) {
+      weighted_precision(sub$verdict, sub$inclusion_prob)
+    } else {
+      mean(sub$verdict == "positive")
+    }
+    apoio <- if (ponderar) kish_n(sub$inclusion_prob) else nrow(sub)
+    if (apoio >= n_min && precisao >= alvo) {
       out$threshold <- c0
       out$n_support <- nrow(sub)
       out$precision_at_threshold <- mean(sub$verdict == "positive")
       if (pesos) {
         out$precision_weighted_at_threshold <-
           weighted_precision(sub$verdict, sub$inclusion_prob)
+        out$n_eff <- if (anyNA(sub$inclusion_prob)) {
+          NA_real_
+        } else {
+          kish_n(sub$inclusion_prob)
+        }
+        out$precision_used <- if (ponderar) "weighted" else "unweighted"
       }
       return(out)
     }
@@ -491,7 +563,9 @@ plot_precision <- function(precision, bins = seq(0.1, 1, by = 0.1),
 #'
 #' With `inclusion_prob` in the manifest (clips of `"random_detections"`),
 #' the precision tables also give the precision weighted by
-#' `1 / inclusion_prob`; see [precision_by_bin()].
+#' `1 / inclusion_prob` (see [precision_by_bin()]), and that precision
+#' chooses the thresholds, unless `weighted = FALSE`; see
+#' [suggest_thresholds()].
 #'
 #' This is the function form of the v1.2.0 script `pos_validacao.R`.
 #'
@@ -511,6 +585,7 @@ plot_precision <- function(precision, bins = seq(0.1, 1, by = 0.1),
 #'   instead of the subfolders of `review_dir`.
 #' @param reviewer With `verdicts_file`, optional reviewer(s) whose
 #'   verdicts are used, as in [app_verdicts()].
+#' @param weighted Passed to [suggest_thresholds()].
 #'
 #' @return A list with the tables `validation`, `precision`, `thresholds`,
 #'   `presence` and `retraining`, invisibly.
@@ -521,7 +596,7 @@ post_validation <- function(review_dir = NULL, manifest_path, output_dir,
                             bins = seq(0.1, 1, by = 0.1),
                             target_precision = 0.90,
                             min_n = 15, verdicts_file = NULL,
-                            reviewer = NULL) {
+                            reviewer = NULL, weighted = NULL) {
   if (is.null(verdicts_file)) {
     if (is.null(review_dir)) {
       stop("Give `review_dir` (review in the BirdNET GUI) or ",
@@ -564,7 +639,8 @@ post_validation <- function(review_dir = NULL, manifest_path, output_dir,
   precisao <- precision_by_bin(resultado, bins, min_n)
   write_csv(precisao, file.path(output_dir, "precision_by_bin.csv"))
 
-  thresholds <- suggest_thresholds(resultado, target_precision, min_n)
+  thresholds <- suggest_thresholds(resultado, target_precision, min_n,
+                                   weighted = weighted)
   write_csv(thresholds, file.path(output_dir, "suggested_thresholds.csv"))
   message("Suggested thresholds (target precision ", target_precision,
           "): see suggested_thresholds.csv")

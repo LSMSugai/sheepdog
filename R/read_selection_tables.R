@@ -22,7 +22,10 @@
 #' Run BirdNET once per site, so that the tables of each site end up in
 #' their own folder: per-audio tables in subfolders of a site folder would be
 #' read as separate sites. A folder that holds a combined table is read from
-#' it alone, and its per-audio tables are ignored, with a message.
+#' it alone, and its per-audio tables are ignored, with a message. When the
+#' tables of several sites share a folder, `site_pattern` takes the site
+#' from the name of the audio file of each prediction (`Begin Path`)
+#' instead.
 #'
 #' Column names are standardised to lower case without units or punctuation,
 #' e.g. `Begin Time (s)` becomes `begin_time` and `File Offset (s)` becomes
@@ -33,6 +36,12 @@
 #'   tables.
 #' @param per_audio_pattern Regular expression for the file names of
 #'   per-audio tables. `NULL` reads only combined tables.
+#' @param site_pattern Optional regular expression with one capture group
+#'   that takes the site from the name of the audio file in `Begin Path`,
+#'   instead of from the folder of the table. For example,
+#'   `"^[^_]+_([^_]+)_"` reads `Campus01` from
+#'   `Campinas_Campus01_20261003_074339.flac`. Use the same pattern in
+#'   [list_recordings()].
 #'
 #' @return A tibble with one row per prediction, the column `site` first,
 #'   followed by the standardised table columns. The columns `begin_time`,
@@ -41,7 +50,8 @@
 #' @export
 read_selection_tables <- function(data_dir,
                                   table_pattern = "^BirdNET_SelectionTable\\.txt$",
-                                  per_audio_pattern = "\\.BirdNET\\.selection\\.table\\.txt$") {
+                                  per_audio_pattern = "\\.BirdNET\\.selection\\.table\\.txt$",
+                                  site_pattern = NULL) {
   fontes <- find_selection_tables(data_dir, table_pattern, per_audio_pattern)
   if (length(fontes) == 0) {
     outras <- list.files(data_dir, pattern = "(?i)selection.?table.*\\.txt$",
@@ -66,6 +76,9 @@ read_selection_tables <- function(data_dir,
 
   if (is.null(predicoes) || nrow(predicoes) == 0) {
     stop("No prediction read - were all the tables found empty?")
+  }
+  if (!is.null(site_pattern)) {
+    predicoes$site <- site_from_name(predicoes$begin_path, site_pattern)
   }
   message(nrow(predicoes), " predictions read from ",
           n_distinct(predicoes$site), " site(s).")

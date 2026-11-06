@@ -52,7 +52,9 @@ Suggests:
     posterior,
     priorsense,
     rmarkdown,
+    rstudioapi,
     shiny,
+    tcltk,
     testthat (>= 3.0.0),
     vegan
 Additional_repositories: https://diogoprov.r-universe.dev

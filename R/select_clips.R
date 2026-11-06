@@ -459,6 +459,11 @@ select_clips <- function(detections,
             " of the ", n_distinct(selecao[c("site", "species_code",
                                              "occasion_id")]),
             " occasions drawn).")
+    if (all(selecao$inclusion_prob == 1)) {
+      message("Every candidate occasion was taken (inclusion_prob = 1): this ",
+              "is a census of them, not a random draw. For a sample, use ",
+              "wider `strata` or a smaller `n_top`.")
+    }
   }
 
   selecao <- mutate(selecao, sampling_mode = modo)

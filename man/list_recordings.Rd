@@ -8,6 +8,7 @@ list_recordings(
   audio_dir,
   audio_pattern = "\\\\.(wav|flac|mp3)$",
   site = NULL,
+  site_pattern = NULL,
   remap_from = NULL,
   remap_to = NULL,
   predictions = NULL,
@@ -22,6 +23,12 @@ insensitive).}
 
 \item{site}{\code{NULL} (the site is the first folder below \code{audio_dir}) or a
 single site name for every file.}
+
+\item{site_pattern}{Optional regular expression with one capture group
+that takes the site from the file name, for recordings of several sites
+in the same folder. For example, \code{"^[^_]+_([^_]+)_"} reads \code{Campus01}
+from \code{Campinas_Campus01_20261003_074339.flac}. It replaces the folder
+rule and cannot be combined with \code{site}.}
 
 \item{remap_from, remap_to}{Replace the prefix \code{remap_from} of the listed
 paths by \code{remap_to}, e.g. \code{"/Volumes/NAS/"} and \code{"N:/"}, so that the

@@ -33,7 +33,7 @@ digraph extraction {
     fontcolor = "#1f5c8b"; color = "#bcd4e6"; style = "rounded"
     bgcolor = "#eef5fb"
 
-    tabelas [label = "BirdNET_SelectionTable.txt\none per site (folder = site),\npredictions on every recording",
+    tabelas [label = "BirdNET_SelectionTable.txt\none per site (folder = site, or\nsite_pattern on the file name),\npredictions on every recording",
              shape = note, fillcolor = "#ffffff"]
     audios  [label = "Recordings\n..._YYYYMMDD_HHMMSS (.wav, .flac, .mp3)\n(Begin Path column)",
              shape = note, fillcolor = "#ffffff"]
@@ -45,7 +45,7 @@ digraph extraction {
     fontcolor = "#8a5a00"; color = "#ecd9b0"; style = "rounded"
     bgcolor = "#fdf6e9"
 
-    ler      [label = "read_selection_tables()\nstandardised columns, site = folder",
+    ler      [label = "read_selection_tables()\nstandardised columns,\nsite = folder or site_pattern",
               fillcolor = "#fceecf"]
     remap    [label = "Remap paths (optional)\nremap_from / remap_to",
               fillcolor = "#fceecf"]
@@ -62,6 +62,9 @@ digraph extraction {
     meta     [label = "target_total / max_per_species\nbalanced by species (and hour)",
               fillcolor = "#fceecf"]
   }
+
+  lista [label = "list_recordings()\nevery recording made,\nwith or without predictions\n(recordings =)",
+         shape = note, fillcolor = "#ffffff"]
 
   bins [label = "covariate_bins()\nbins of a night or occasion covariate\n(covariates =)",
         shape = note, fillcolor = "#ffffff"]
@@ -86,7 +89,7 @@ digraph extraction {
   manifesto [label = "clip_manifest.csv\nsite, species_code, night, recording_hour, confidence,\nclip_file, clip_start, clip_end, source_audio, status,\nsampling_mode, occasion_id, n_detections_occasion,\ninclusion_prob, ...",
              shape = note, fillcolor = "#ffffff"]
 
-  gui [label = "Manual review in the BirdNET GUI\n> post_validation()",
+  gui [label = "Manual review in the BirdNET GUI or run_app()\n> post_validation()",
        fillcolor = "#dff0d8", color = "#7cae7c", penwidth = 1.4]
 
   /* ---------------- FLUXO ---------------- */
@@ -98,6 +101,7 @@ digraph extraction {
   modo     -> det
   modo     -> rec
   bins     -> det       [style = dashed]
+  lista    -> rec       [style = dashed]
   top      -> meta
   det      -> meta
   rec      -> simular

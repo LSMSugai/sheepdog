@@ -9,10 +9,12 @@ run_app(
   clips_dir = NULL,
   verdicts_file = NULL,
   reviewer = NULL,
-  max_freq = NULL,
+  max_freq = 12,
   selection_dir = NULL,
   output_dir = NULL,
   recordings = NULL,
+  audio_dir = NULL,
+  site_pattern = NULL,
   classifier = NULL,
   launch.browser = interactive(),
   ...
@@ -36,8 +38,9 @@ path.}
 manifest from \code{\link[=assign_reviewers]{assign_reviewers()}}, only the clips assigned to this
 reviewer (as first or second reviewer) are shown.}
 
-\item{max_freq}{Optional upper limit of the spectrogram, in kHz (e.g.
-\code{8} for most anuran calls). The whole band by default.}
+\item{max_freq}{Upper limit of the spectrogram, in kHz: 12 by default
+(e.g. \code{8} for most anuran calls). \code{NULL} shows the whole band. It can
+also be changed in the Review tab.}
 
 \item{selection_dir}{Folder of the BirdNET selection tables (as in
 \code{\link[=read_selection_tables]{read_selection_tables()}}). Opens the Sampling and Export tabs.}
@@ -50,6 +53,18 @@ default) are written there.}
 \code{source_audio}), or the path to its CSV: needed by
 \code{"random_recordings"} and, in the export, to keep the occasions
 without detections (see \code{\link[=export_occupancy_data]{export_occupancy_data()}}).}
+
+\item{audio_dir}{Optional folder of the recordings, subfolders included.
+Every recording is listed with \code{\link[=list_recordings]{list_recordings()}} and written to the
+\code{recordings} CSV when it is a path, or else to
+\verb{<output_dir>/recordings.csv}; the list is used as \code{recordings}.
+Can also be chosen in the app (Intro > Audio panel).}
+
+\item{site_pattern}{Optional regular expression with one capture group
+that takes the site from the file names, when the recordings or the
+selection tables of several sites share a folder (see
+\code{\link[=list_recordings]{list_recordings()}} and \code{\link[=read_selection_tables]{read_selection_tables()}}). Can also be set in
+the Audio panel.}
 
 \item{classifier}{Label of the classifier, recorded in
 \code{extraction_info.csv} and \code{schema.json}.}
@@ -68,6 +83,11 @@ workflow. The tabs depend on the arguments:
 }
 \details{
 \itemize{
+\item \strong{Intro}: a graphical abstract of the sampling designs and an Audio
+panel to choose the audio folder, the BirdNET results and the
+validation folder (with a dialog of the system), with a summary of the
+recordings per site and night. Folders given to \code{run_app()} are
+confirmed when the app opens. Without them, the app opens on this tab.
 \item \strong{Sampling} (with \code{selection_dir} and \code{output_dir}): a form for the
 sampling design of \code{\link[=select_clips]{select_clips()}}. \emph{Draw} shows the clips per site
 and species and their inclusion probabilities without touching the
@@ -97,7 +117,7 @@ nothing is uploaded.
 \section{Keyboard}{
 
 In the Review tab: \code{p} positive, \code{n} negative, \code{u} uncertain, right
-arrow or space next clip, left arrow previous clip.
+arrow next clip, left arrow previous clip, space play or pause.
 }
 
 \section{Verdicts file}{

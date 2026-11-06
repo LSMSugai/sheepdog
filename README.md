@@ -10,10 +10,11 @@ the wolf is real. **sheepdog** does that check for automated predictions from
 [BirdNET](https://github.com/birdnet-team/BirdNET-Analyzer) pretrained and custom classifiers
 in passive acoustic monitoring (PAM). It runs three stages:
 
-1. **Validation data.** Build clip sets for manual review from the output BirdNET
+1. **Validation data.** Build clip sets for manual review from the BirdNET
    selection tables: top-score, random-occasion or random-recording designs,
-   one folder per species, ready for the review tab of the BirdNET GUI. The
-   random draws can be stratified along an environmental gradient. Then
+   one folder per species, ready for the review tab of the BirdNET GUI or for
+   the review app of the package (`run_app()`). The random draws can be
+   stratified along an environmental gradient. Then
    summarise the reviewed clips: precision by confidence bin, suggested
    thresholds, confirmed presence by night, clips for retraining and the
    cells that still need review.
@@ -110,6 +111,11 @@ post_validation(review_dir    = "N:/Arara/validation/clips",
                 manifest_path = "N:/Arara/validation/clip_manifest.csv",
                 output_dir    = "N:/Arara/validation/results")
 
+# or after the review in the app, run_app()
+post_validation(manifest_path = "N:/Arara/validation/clip_manifest.csv",
+                output_dir    = "N:/Arara/validation/results",
+                verdicts_file = "N:/Arara/validation/verdicts.csv")
+
 # 2. Calibration and nightly detection histories
 calibrate(validation_files  = c("UEM/validation_by_clip.csv",
                                 "ARA/validation_by_clip.csv"),
@@ -127,12 +133,12 @@ Each stage is also available as separate functions:
 
 | Stage | Functions |
 |---|---|
-| 1. Selecting and cutting clips | `read_selection_tables()`, `select_clips()` (a pure function that returns the clip manifest without touching audio), `covariate_bins()` (strata along a gradient), `cut_clips()`, `pack_clips()` |
-| 1. Review app | `run_app()` (local 'shiny' app: draw and cut the clips, review them with spectrogram, player and keyboard verdicts written to a CSV, and export the occupancy tables), `app_verdicts()` |
+| 1. Selecting and cutting clips | `read_selection_tables()`, `list_recordings()` (every recording made, with or without predictions), `select_clips()` (a pure function that returns the clip manifest without touching audio), `covariate_bins()` (strata along a gradient), `cut_clips()`, `pack_clips()` |
+| 1. Review app | `run_app()` (local 'shiny' app: choose the folders and see the recordings per site and night, draw and cut the clips, review them with spectrogram, player and keyboard verdicts written to a CSV, and export the occupancy tables), `app_verdicts()` |
 | 1. Several reviewers | `assign_reviewers()`, `split_by_reviewer()`, `reviewer_agreement()` (Cohen's or Fleiss' kappa), `consensus_verdicts()` |
-| 1. After the review | `classify_review()`, `precision_by_bin()`, `suggest_thresholds()`, `nightly_presence()`, `retraining_clips()`, `read_validation_tables()`, `review_support()` (cells, or bins, that still need review) |
-| 1. Retraining | `build_training_set()` (training folders for BirdNET-Analyzer), `exclude_training_clips()` |
-| 2. Calibration | `read_validations()`, `calibration_models()`, `calibration_folds()`, `compare_calibration_models()`, `select_calibration_model()`, `fit_calibration()`, `calibration_effort()`, `score_detections()`, `detection_history()`, `summarise_history()` |
+| 1. After the review | `classify_review()`, `precision_by_bin()`, `suggest_thresholds()`, `plot_precision()`, `nightly_presence()`, `retraining_clips()`, `read_validation_tables()`, `review_support()` (cells, or bins, that still need review) |
+| 1. Retraining | `build_training_set()` (training folders for BirdNET-Analyzer), `exclude_training_clips()`, `training_nights()` |
+| 2. Calibration | `read_validations()`, `calibration_models()`, `calibration_folds()`, `compare_calibration_models()`, `select_calibration_model()`, `fit_calibration()`, `calibration_quality()` (held-out quality of P(TP) by species), `calibrated_thresholds()` (a threshold per site x species from the model), `calibration_effort()`, `score_detections()`, `detection_history()`, `summarise_history()` |
 | 2. Bayesian calibration | `calibration_prior()`, `prior_predictive_calibration()`, `calibration_diagnostics()`, `calibration_ppc()`, `plot_calibration_ppc()`, `calibration_sensitivity()`, `plot_calibration_draws()`, `history_draws()` |
 | Occupancy data | `export_occupancy_data()` (schema `sheepdog-occupancy`), `occasion_draws()` (one detection data set per posterior draw) |
 | 3. Community matrices | `cell_status()`, `suggest_core_species()`, `community_matrices()`, `community_matrices_draws()` |
@@ -144,7 +150,8 @@ workflow.
 The selection tables must have the standard BirdNET/Raven columns
 `Begin Time (s)`, `End Time (s)`, `Species Code`, `Confidence`, `Begin Path`
 and `File Offset (s)`, and the recordings must be named
-`..._YYYYMMDD_HHMMSS`.
+`..._YYYYMMDD_HHMMSS`. The site is the name of the folder; when the files of
+several sites share a folder, `site_pattern` reads it from the file name.
 
 ## Sampling designs
 
@@ -169,7 +176,9 @@ and `File Offset (s)`, and the recordings must be named
 ![The first stage, extract_validation_clips()](man/figures/extraction_flow.png)
 
 The manifest records `occasion_id`, `n_detections_occasion` and
-`inclusion_prob` (the probability that the occasion was drawn). Every draw
+`inclusion_prob` (the probability that the occasion was drawn), with which
+`post_validation()` also reports the precision weighted by
+`1 / inclusion_prob` and uses it to suggest the thresholds. Every draw
 uses a fixed seed, so a rerun selects the same clips, and the cut is
 idempotent: an interrupted run resumes where it stopped.
 
@@ -193,7 +202,10 @@ stratified k-fold cross-validation, which scores both discrimination (AUC)
 and the predicted probabilities (log-loss, Brier score, calibration
 intercept and slope); `select_calibration_model()` picks a model by the
 highest AUC or by the simplest model within one standard error of the lowest
-log-loss, leaving out singular fits.
+log-loss, leaving out singular fits. `calibration_quality()` then
+scores the held-out predictions of that model species by species, against a
+null model, because measures over all the clips can hide a species whose
+score says little.
 
 The selected model can also be fitted in a Bayesian framework with 'brms'
 (`engine = "brms"`), with an explicit prior, convergence diagnostics,

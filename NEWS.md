@@ -1,5 +1,58 @@
 # sheepdog (development version)
 
+- `suggest_thresholds()` now chooses the cut with the precision weighted by
+  `1 / inclusion_prob` in the cells whose clips all have it, as
+  `"random_detections"` draws strata with unequal probabilities. `min_n`
+  applies there to Kish's effective sample size, given in `n_eff`, and
+  `precision_used` says which precision chose each cut. **Thresholds of
+  such cells can change**; `weighted = FALSE`, also in `post_validation()`
+  and `review_support()`, restores the previous choice. Cells that mix
+  clips with and without `inclusion_prob` use the unweighted precision,
+  with a warning. Tables without `inclusion_prob` are unchanged (#103).
+- New `calibration_quality()`: checks the calibrated probabilities by
+  species (or by cell) on held-out clips, with the gain in log-loss over a
+  null model, the AUC of the probabilities and of the raw score within the
+  group, the calibration intercept and slope, and a `status`. The measures
+  of `compare_calibration_models()` cover all the clips and can hide a
+  species whose score says little. `calibrate()` writes
+  `calibration_quality.csv`, returns `quality` and names the groups marked
+  `"poor"`.
+- `select_clips()`: `"random_detections"` now says so when every candidate
+  occasion was taken (all `inclusion_prob` equal to 1), which is a census
+  and not a random draw.
+- `run_app()`: the app opens on a new Intro tab with a graphical abstract
+  of the sampling designs and an Audio panel, where the audio folder (new
+  `audio_dir` argument, listed into `recordings.csv`), the BirdNET results
+  and the validation folder can be chosen with the system's folder dialog.
+  Folders given to `run_app()` are confirmed when the app opens, and
+  `run_app()` can be called without arguments. The panel shows the
+  recordings per site and night, coloured by the share of hours with
+  predictions of the chosen species, with the number of predictions on
+  hover.
+- `run_app()`: every field has a short help note; the threshold is marked
+  "(required)" for `"random_detections"`. After each draw the Sampling tab
+  checks that the recordings exist and, with *Audio folder*, finds moved
+  recordings by file name and offers to use them. A cut that finds no
+  audio says so, and a manifest without cut clips no longer stops the app
+  from opening.
+- `run_app()`, Review tab: the spectrogram has a palette, the FFT window,
+  the maximum frequency (12 kHz by default, also `max_freq`), brightness
+  and contrast above it, uses 90% overlap, and a dashed line follows the audio. The clip number is shown
+  above the spectrogram, and space now plays or pauses the clip (the right
+  arrow moves to the next one).
+- New argument `site_pattern` of `list_recordings()`,
+  `read_selection_tables()`, `extract_validation_clips()` and `run_app()`
+  (also a field of the Audio panel): a regular expression with one capture
+  group that takes the site from the file name, for recordings or tables
+  of several sites in one folder.
+- `run_app()`: the moved-recording check of the Sampling tab reuses the
+  list of the audio folder made by the Audio panel instead of scanning the
+  folder again at each draw, and the folder dialog also works on Linux
+  (through 'tcltk', when there is a display).
+- The review-app article describes the Intro tab, the Audio panel and its
+  recording summary, `site_pattern` and the spectrogram controls, and
+  gives the new default of `max_freq` (12 kHz).
+
 - `post_validation()` reads the verdicts of the review app: with
   `verdicts_file` (and optionally `reviewer`) it takes the verdicts from
   `run_app()` instead of the review folders, combines clips reviewed by

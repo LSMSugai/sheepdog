@@ -103,8 +103,10 @@ recordings or nights by species or by outcome. Group IDs must be
 nonmissing and nonempty. \code{NULL} keeps the original clip folds.}
 }
 \value{
-A list with \code{comparison}, \code{fit}, \code{effort} (or \code{NULL}), \code{scored},
-\code{thresholds} and \code{history}, invisibly.
+A list with \code{comparison}, \code{quality} (from
+\code{\link[=calibration_quality]{calibration_quality()}}, by species, or by site with one species, also
+written to \code{calibration_quality.csv}), \code{fit}, \code{effort} (or \code{NULL}),
+\code{scored}, \code{thresholds} and \code{history}, invisibly.
 }
 \description{
 Runs the whole calibration stage: reads the reviewed clips, compares the
