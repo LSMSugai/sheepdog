@@ -27,7 +27,8 @@ cut_clips <- function(manifest, output_dir, simulate = FALSE) {
   walk(unique(dirname(destino)),
        dir.create, recursive = TRUE, showWarnings = FALSE)
 
-  processar_linha <- function(origem, destino, inicio, duracao) {
+  processar_linha <- function(origem, destino, inicio, duracao, herdado) {
+    if (herdado)                    return("inherited")
     if (file.exists(destino))       return("already_exists")
     if (!file.exists(origem))       return("audio_not_found")
     if (simulate)                   return("simulated")
@@ -42,7 +43,7 @@ cut_clips <- function(manifest, output_dir, simulate = FALSE) {
 
   manifest$status <- pmap_chr(
     list(manifest$source_audio, destino,
-         manifest$clip_start, manifest$duration),
+         manifest$clip_start, manifest$duration, is_inherited(manifest)),
     processar_linha,
     .progress = "clips"
   )

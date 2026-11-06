@@ -88,7 +88,8 @@
 #'   [select_clips()]. `NULL` lists the audio files in the folders of the
 #'   recordings that have predictions, which then must be reachable (see
 #'   `remap_from`).
-#' @param validation Reviewed clips: paths to `validation_by_clip.csv`
+#' @param validation Reviewed clips, without those with an inherited verdict
+#'   (see [select_clips()]): paths to `validation_by_clip.csv`
 #'   files (output of [post_validation()]) or a data frame with their
 #'   columns, e.g. from [read_validation_tables()] or
 #'   [consensus_verdicts()]. `NULL` writes no validation tables.
@@ -602,6 +603,17 @@ export_validation <- function(validation, ocasioes) {
     stop("`validation` lacks column(s): ", paste(faltam, collapse = ", "),
          ". Was it written by post_validation()?", call. = FALSE)
   }
+  # um veredito herdado e o mesmo julgamento do outro desenho: exporta-lo daria
+  # ao modelo duas observacoes dele
+  herdados <- is_inherited(validation)
+  if (any(herdados)) {
+    warning(sum(herdados), " clip(s) with an inherited verdict left out, as ",
+            "they repeat a judgement. They are chosen by their verdict, which ",
+            "can bias the rates that an occupancy model estimates from these ",
+            "tables; review them (`inherit = FALSE` in select_clips()) if ",
+            "they are many.", call. = FALSE)
+    validation <- validation[!herdados, ]
+  }
   for (col in c("confidence", "clip_start", "clip_end", "inclusion_prob",
                 "n_detections_occasion")) {
     if (!col %in% names(validation)) validation[[col]] <- NA_real_
@@ -630,6 +642,17 @@ export_validation <- function(validation, ocasioes) {
       arrange(site, occasion_id, species_code, clip_start)
   )
   gravacoes <- filter(v, sampling_mode == "random_recordings")
+  nas_duas <- semi_join(
+    distinct(filter(out$validation, sampling_mode == "random_detections"),
+             site, species_code, occasion_id),
+    gravacoes, by = c("site", "species_code", "occasion_id"))
+  if (nrow(nas_duas) > 0) {
+    warning(nrow(nas_duas), " occasion(s) are in both `validation` and ",
+            "`recordings_verified`. A model that reads both takes them as ",
+            "two independent reviews; say so if the clips also set the ",
+            "thresholds, and check that one verdict was not copied from the ",
+            "other.", call. = FALSE)
+  }
   if (nrow(gravacoes) > 0) {
     out$recordings_verified <- gravacoes |>
       select(site, occasion_id, species_code, species, inclusion_prob,

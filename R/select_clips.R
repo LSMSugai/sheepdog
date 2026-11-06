@@ -52,6 +52,38 @@
 #' cell reaches a target, makes the stopping depend on the results; see
 #' `vignette("validation-effort")`.
 #'
+#' @section Reusing the other design:
+#' A study can draw both `"random_detections"` and `"random_recordings"`.
+#' With `previous` of the other design, the occasions reviewed there stay in
+#' the pool, so that this draw remains independent and its inclusion
+#' probabilities do not change, and `previously_reviewed` marks the clips
+#' that overlap an earlier review, matching site, species, recording and
+#' time, so that minutes and files can be mixed. With `inherit = TRUE`, what
+#' the earlier review already tells is reused:
+#'
+#' | Earlier review | This draw | Inherited | Still to review |
+#' | --- | --- | --- | --- |
+#' | recording absent | `"random_detections"` | every prediction is negative | nothing |
+#' | recording present | `"random_detections"` | nothing | the clips |
+#' | a positive prediction | `"random_recordings"` | the recording is present | nothing |
+#' | only negative predictions | `"random_recordings"` | nothing | the recording |
+#'
+#' The species may have called below the threshold, so negative predictions
+#' say nothing about the recording. [cut_clips()] skips the clips with an
+#' `inherited_verdict`, the review app leaves them out, and
+#' [post_validation()] fills them in, so that the table of each design is
+#' complete for its precision and thresholds.
+#' [export_occupancy_data()] leaves them out: an inherited verdict is the
+#' same judgement as the earlier one, and exporting it would give a model two
+#' observations of it.
+#'
+#' `inherit` is `FALSE` by default because of that last step. The occasions
+#' left out are chosen by their verdict (present recordings, negative clips),
+#' which can bias what an occupancy model estimates from those tables. The
+#' overlap between two random draws is usually small, so reviewing it costs
+#' little; use `inherit = TRUE` when the tables will not go to an occupancy
+#' model.
+#'
 #' @param detections Predictions, as returned by [read_selection_tables()].
 #' @param sampling_mode `"top"`, `"random_detections"` or
 #'   `"random_recordings"`. See *Sampling modes*.
@@ -153,15 +185,20 @@
 #' @param remap_from,remap_to Replace the prefix `remap_from` of the
 #'   `begin_path` paths by `remap_to`, e.g. `"N:/"` and `"/Volumes/Arara/"`.
 #'   Backslashes are turned into forward slashes first.
-#' @param previous Earlier rounds of the same design, to draw another round
-#'   (see Review rounds): paths to their `clip_manifest.csv` or
-#'   `validation_by_clip.csv`, a data frame, or a list of these.
+#' @param previous Earlier reviews: paths to their `clip_manifest.csv` or
+#'   `validation_by_clip.csv`, a data frame, or a list of these. Rounds of the
+#'   same design give another round (see Review rounds); reviews of the other
+#'   random design, which need `validation_by_clip.csv`, give their verdicts
+#'   (see Reusing the other design).
 #' @param candidates With `previous`, the `candidates.csv` of the first
 #'   round, as a path or a data frame. `NULL` looks for it in the folders of
 #'   `previous`.
 #' @param cells With `previous`, restrict the round to these cells: a data
 #'   frame with `site` and `species_folder` or `species_code`, such as the
 #'   rows of [review_support()] with `diagnosis == "review more"`.
+#' @param inherit With `previous` of the other design, give the clips the
+#'   verdict that the earlier review implies, so that they need no review?
+#'   See Reusing the other design.
 #' @param seed Seed of every random draw. The global random number
 #'   generator is left as it was.
 #'
@@ -173,7 +210,8 @@
 #'   over the rounds), `round`, `n_candidates` (`N` of the stratum), `n_drawn`
 #'   (occasions drawn in the stratum, all rounds so far; both `NA` outside
 #'   `"random_detections"` and under a cap) and `inclusion_prob_round` (the
-#'   draw of that round alone). See
+#'   draw of that round alone), `previously_reviewed`, `inherited_verdict`
+#'   and `source_design` (see Reusing the other design). See
 #'   `vignette("crywolf-integration")` for their definitions.
 #' @export
 select_clips <- function(detections,
@@ -205,7 +243,8 @@ select_clips <- function(detections,
                          seed = 2026,
                          previous = NULL,
                          candidates = NULL,
-                         cells = NULL) {
+                         cells = NULL,
+                         inherit = FALSE) {
   modo    <- match.arg(sampling_mode)
   estrato1 <- resolve_strata(strata)
   rotulo1  <- paste(estrato1, collapse = " x ")
@@ -216,28 +255,43 @@ select_clips <- function(detections,
 
   # Rodadas anteriores do mesmo desenho
   rodadas <- NULL
+  outro_desenho <- NULL
   rodada <- 1L
   if (!is.null(previous)) {
-    rodadas <- read_previous(previous)
-    outros <- setdiff(unique(rodadas$sampling_mode), modo)
-    if (length(outros) > 0) {
-      stop("`previous` has clips of ", paste(outros, collapse = ", "),
+    anteriores <- read_previous(previous)
+    modos <- setdiff(unique(anteriores$sampling_mode), modo)
+    aleatorios <- c("random_detections", "random_recordings")
+    if (length(modos) > 0 && !all(c(modo, modos) %in% aleatorios)) {
+      stop("`previous` has clips of ", paste(modos, collapse = ", "),
            ", and this draw is ", modo, ": `previous` takes rounds of the ",
-           "same design.", call. = FALSE)
+           "same design, or the other random design.", call. = FALSE)
     }
+    outro_desenho <- filter(anteriores, sampling_mode != modo)
+    if (nrow(outro_desenho) == 0) outro_desenho <- NULL
+    mesmo <- filter(anteriores, sampling_mode == modo)
+    if (nrow(mesmo) > 0) rodadas <- mesmo
+  }
+  if (!is.null(rodadas)) {
     if (modo == "random_recordings") {
-      stop("`previous` is not available for \"random_recordings\".",
+      stop("Later rounds are not available for \"random_recordings\".",
            call. = FALSE)
     }
     if (!is.null(target_total) || !is.null(max_per_species)) {
       stop("`target_total` and `max_per_species` cannot be used with ",
-           "`previous`: the second stage would depend on the counts of each ",
-           "round.", call. = FALSE)
+           "earlier rounds: the second stage would depend on the counts of ",
+           "each round.", call. = FALSE)
     }
     rodada <- max(rodadas$round) + 1L
+    message("`previous`: earlier rounds of this design, so their occasions ",
+            "leave the pool.")
   } else if (!is.null(candidates) || !is.null(cells)) {
-    stop("`candidates` and `cells` are for later rounds: give `previous`.",
-         call. = FALSE)
+    stop("`candidates` and `cells` are for later rounds: give `previous` ",
+         "with the earlier rounds of this design.", call. = FALSE)
+  }
+  if (!is.null(outro_desenho)) {
+    message("`previous`: reviews of another design, so the draw stays ",
+            "independent", if (inherit) " and their verdicts are reused",
+            ".")
   }
   if (!is.null(cells) && modo != "random_detections") {
     stop("`cells` is for \"random_detections\".", call. = FALSE)
@@ -595,6 +649,17 @@ select_clips <- function(detections,
     selecao$n_detections_occasion <- NA_integer_
   }
 
+  if (is.null(outro_desenho)) {
+    selecao <- mutate(selecao, previously_reviewed = FALSE,
+                      inherited_verdict = NA_character_,
+                      source_design = NA_character_)
+  } else {
+    selecao <- inherit_verdicts(selecao, outro_desenho, modo)
+    if (!inherit) selecao$inherited_verdict <- NA_character_
+    message(sum(selecao$previously_reviewed), " clip(s) overlap an earlier ",
+            "review; ", sum(!is.na(selecao$inherited_verdict)), " inherit its ",
+            "verdict and need no review.")
+  }
   saida <- select(selecao, all_of(manifest_columns[manifest_columns != "status"]))
   if (modo == "random_detections") attr(saida, "candidates") <- lista
   saida
@@ -606,7 +671,8 @@ manifest_columns <- c(
   "recording_hour", "rank", "confidence", "clip_file", "clip_start",
   "clip_end", "duration", "source_audio", "begin_path", "status",
   "sampling_mode", "occasion_id", "n_detections_occasion", "inclusion_prob",
-  "round", "n_candidates", "n_drawn", "inclusion_prob_round"
+  "round", "n_candidates", "n_drawn", "inclusion_prob_round",
+  "previously_reviewed", "inherited_verdict", "source_design"
 )
 
 # Lista todas as gravacoes de cada local: a tabela dada (data frame ou

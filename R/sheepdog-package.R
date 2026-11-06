@@ -13,6 +13,8 @@ NULL
 
 # Colunas usadas via tidy evaluation (evita NOTEs do R CMD check)
 utils::globalVariables(c(
+  ".a", ".b", ".ini", ".fim", ".linha", ".rec", ".negativo", ".desenho",
+  ".todos_neg", ".algum_pos", "inherited_verdict",
   "thr_empirical", "prec_empirical", "n_support", "thr_model_precision",
   "thr_p_tp", "p_tp_at_threshold", "model_precision_at_empirical",
   "max_reviewed", "above_reviewed", "flag", "precision_used",

@@ -33,7 +33,8 @@ select_clips(
   seed = 2026,
   previous = NULL,
   candidates = NULL,
-  cells = NULL
+  cells = NULL,
+  inherit = FALSE
 )
 }
 \arguments{
@@ -165,9 +166,11 @@ Backslashes are turned into forward slashes first.}
 \item{seed}{Seed of every random draw. The global random number
 generator is left as it was.}
 
-\item{previous}{Earlier rounds of the same design, to draw another round
-(see Review rounds): paths to their \code{clip_manifest.csv} or
-\code{validation_by_clip.csv}, a data frame, or a list of these.}
+\item{previous}{Earlier reviews: paths to their \code{clip_manifest.csv} or
+\code{validation_by_clip.csv}, a data frame, or a list of these. Rounds of the
+same design give another round (see Review rounds); reviews of the other
+random design, which need \code{validation_by_clip.csv}, give their verdicts
+(see Reusing the other design).}
 
 \item{candidates}{With \code{previous}, the \code{candidates.csv} of the first
 round, as a path or a data frame. \code{NULL} looks for it in the folders of
@@ -176,6 +179,10 @@ round, as a path or a data frame. \code{NULL} looks for it in the folders of
 \item{cells}{With \code{previous}, restrict the round to these cells: a data
 frame with \code{site} and \code{species_folder} or \code{species_code}, such as the
 rows of \code{\link[=review_support]{review_support()}} with \code{diagnosis == "review more"}.}
+
+\item{inherit}{With \code{previous} of the other design, give the clips the
+verdict that the earlier review implies, so that they need no review?
+See Reusing the other design.}
 }
 \value{
 A tibble, the clip manifest without \code{status}, with the columns
@@ -186,7 +193,8 @@ A tibble, the clip manifest without \code{status}, with the columns
 over the rounds), \code{round}, \code{n_candidates} (\code{N} of the stratum), \code{n_drawn}
 (occasions drawn in the stratum, all rounds so far; both \code{NA} outside
 \code{"random_detections"} and under a cap) and \code{inclusion_prob_round} (the
-draw of that round alone). See
+draw of that round alone), \code{previously_reviewed}, \code{inherited_verdict}
+and \code{source_design} (see Reusing the other design). See
 \code{vignette("crywolf-integration")} for their definitions.
 }
 \description{
@@ -246,5 +254,39 @@ probability, and \code{previous} only leaves out the clips already reviewed.
 Choosing the cells of a round from their verdicts, and stopping when a
 cell reaches a target, makes the stopping depend on the results; see
 \code{vignette("validation-effort")}.
+}
+
+\section{Reusing the other design}{
+
+A study can draw both \code{"random_detections"} and \code{"random_recordings"}.
+With \code{previous} of the other design, the occasions reviewed there stay in
+the pool, so that this draw remains independent and its inclusion
+probabilities do not change, and \code{previously_reviewed} marks the clips
+that overlap an earlier review, matching site, species, recording and
+time, so that minutes and files can be mixed. With \code{inherit = TRUE}, what
+the earlier review already tells is reused:\tabular{llll}{
+   Earlier review \tab This draw \tab Inherited \tab Still to review \cr
+   recording absent \tab \code{"random_detections"} \tab every prediction is negative \tab nothing \cr
+   recording present \tab \code{"random_detections"} \tab nothing \tab the clips \cr
+   a positive prediction \tab \code{"random_recordings"} \tab the recording is present \tab nothing \cr
+   only negative predictions \tab \code{"random_recordings"} \tab nothing \tab the recording \cr
+}
+
+
+The species may have called below the threshold, so negative predictions
+say nothing about the recording. \code{\link[=cut_clips]{cut_clips()}} skips the clips with an
+\code{inherited_verdict}, the review app leaves them out, and
+\code{\link[=post_validation]{post_validation()}} fills them in, so that the table of each design is
+complete for its precision and thresholds.
+\code{\link[=export_occupancy_data]{export_occupancy_data()}} leaves them out: an inherited verdict is the
+same judgement as the earlier one, and exporting it would give a model two
+observations of it.
+
+\code{inherit} is \code{FALSE} by default because of that last step. The occasions
+left out are chosen by their verdict (present recordings, negative clips),
+which can bias what an occupancy model estimates from those tables. The
+overlap between two random draws is usually small, so reviewing it costs
+little; use \code{inherit = TRUE} when the tables will not go to an occupancy
+model.
 }
 

@@ -44,7 +44,8 @@ path to a CSV file with the columns \code{site} and \code{source_audio}, as in
 recordings that have predictions, which then must be reachable (see
 \code{remap_from}).}
 
-\item{validation}{Reviewed clips: paths to \code{validation_by_clip.csv}
+\item{validation}{Reviewed clips, without those with an inherited verdict
+(see \code{\link[=select_clips]{select_clips()}}): paths to \code{validation_by_clip.csv}
 files (output of \code{\link[=post_validation]{post_validation()}}) or a data frame with their
 columns, e.g. from \code{\link[=read_validation_tables]{read_validation_tables()}} or
 \code{\link[=consensus_verdicts]{consensus_verdicts()}}. \code{NULL} writes no validation tables.}
