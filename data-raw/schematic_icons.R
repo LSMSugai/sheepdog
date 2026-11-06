@@ -88,3 +88,41 @@ save_schematic <- function(body, name, w, h, scale = 2) {
   rsvg::rsvg_png(charToRaw(svg), arquivo, width = w * scale)
   message("Schematic written to ", arquivo)
 }
+
+# Pecas dos esquemas de dados ------------------------------------------------
+ocre <- "#8a5a00"; ocre_claro <- "#fceecf"; claro <- "#d9dee3"
+
+svg_rect <- function(x, y, w, h, fill = "#ffffff", stroke = "none", rx = 2) {
+  sprintf('<rect x="%.1f" y="%.1f" width="%.1f" height="%.1f" rx="%s" fill="%s" stroke="%s"/>',
+          x, y, w, h, rx, fill, stroke)
+}
+svg_dot <- function(x, y, r = 3, fill = azul, stroke = "none") {
+  sprintf('<circle cx="%.1f" cy="%.1f" r="%s" fill="%s" stroke="%s"/>', x, y, r, fill, stroke)
+}
+svg_line <- function(x1, y1, x2, y2, stroke = cinza, width = 1, dash = NULL) {
+  d <- if (is.null(dash)) "" else sprintf(' stroke-dasharray="%s"', dash)
+  sprintf('<line x1="%.1f" y1="%.1f" x2="%.1f" y2="%.1f" stroke="%s" stroke-width="%s"%s/>',
+          x1, y1, x2, y2, stroke, width, d)
+}
+# Curva logistica entre x0 e x1, de baixo (y0) para cima (y1)
+svg_logistic <- function(x0, x1, y0, y1, centro = 0.5, k = 9, stroke = ocre,
+                         width = 2.2, dash = NULL) {
+  t <- seq(0, 1, length.out = 60)
+  px <- x0 + t * (x1 - x0)
+  py <- y0 + plogis(k * (t - centro)) * (y1 - y0)
+  d <- if (is.null(dash)) "" else sprintf(' stroke-dasharray="%s"', dash)
+  sprintf('<polyline points="%s" fill="none" stroke="%s" stroke-width="%s"%s/>',
+          paste(sprintf("%.1f,%.1f", px, py), collapse = " "), stroke, width, d)
+}
+# Grade de celulas: on e uma matriz logica ou de intensidades entre 0 e 1
+svg_grid <- function(x, y, on, cell = 13, gap = 2, cor = azul) {
+  out <- character()
+  for (i in seq_len(nrow(on))) for (j in seq_len(ncol(on))) {
+    v <- as.numeric(on[i, j])
+    out <- c(out, sprintf(
+      '<rect x="%.1f" y="%.1f" width="%s" height="%s" rx="2" fill="%s" fill-opacity="%.2f"/>',
+      x + (j - 1) * (cell + gap), y + (i - 1) * (cell + gap), cell, cell,
+      if (v > 0) cor else claro, if (v > 0) max(v, 0.2) else 0.7))
+  }
+  paste(out, collapse = "")
+}
