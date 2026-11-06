@@ -268,3 +268,123 @@ test_that("extract_validation_clips() writes the candidates and protects the man
   expect_equal(unique(m$round), 2L)
   expect_true(file.exists(file.path(d2, "candidates.csv")))
 })
+
+test_that("post_validation() combines the rounds", {
+  pred <- rounds_detections(30)
+  r1 <- draw(pred)
+  lista <- attr(r1, "candidates")
+  r2 <- draw(pred, previous = r1, candidates = lista)
+  d <- withr::local_tempdir()
+  rodada <- function(m, nome, ...) {
+    pasta <- file.path(d, nome)
+    dir.create(pasta)
+    readr::write_csv(m, file.path(pasta, "clip_manifest.csv"))
+    readr::write_csv(
+      dplyr::transmute(m, species_folder, clip_file, reviewer = "x",
+                       verdict = "positive", time = "2024-01-01 00:00:00"),
+      file.path(pasta, "verdicts.csv"))
+    suppressMessages(post_validation(
+      manifest_path = file.path(pasta, "clip_manifest.csv"),
+      verdicts_file = file.path(pasta, "verdicts.csv"),
+      output_dir = file.path(pasta, "out"), min_n = 1, ...))
+  }
+  um <- rodada(r1, "r1")
+  readr::write_csv(lista, file.path(d, "r1", "candidates.csv"))
+  dois <- rodada(r2, "r2",
+                 previous = file.path(d, "r1", "out", "validation_by_clip.csv"),
+                 candidates = file.path(d, "r1", "candidates.csv"))
+  expect_equal(unique(dois$validation$inclusion_prob), 4 / 30)
+  expect_equal(unique(dois$validation$n_rounds), 2L)
+  expect_equal(nrow(dois$validation), nrow(r1) + nrow(r2))
+  expect_true(file.exists(file.path(d, "r2", "out", "validation_combined.csv")))
+  # a tabela da rodada continua so com os clipes dela
+  so_r2 <- readr::read_csv(file.path(d, "r2", "out", "validation_by_clip.csv"),
+                           show_col_types = FALSE)
+  expect_equal(nrow(so_r2), nrow(r2))
+
+  # sem `candidates`, procura ao lado dos arquivos
+  file.copy(file.path(d, "r1", "candidates.csv"),
+            file.path(d, "r1", "out", "candidates.csv"))
+  tres <- suppressMessages(post_validation(
+    manifest_path = file.path(d, "r2", "clip_manifest.csv"),
+    verdicts_file = file.path(d, "r2", "verdicts.csv"),
+    output_dir = file.path(d, "r2", "out2"), min_n = 1,
+    previous = file.path(d, "r1", "out", "validation_by_clip.csv")))
+  expect_equal(unique(tres$validation$inclusion_prob), 4 / 30)
+})
+
+test_that("bad inputs of the rounds stop with a clear message", {
+  pred <- rounds_detections(20)
+  r1 <- draw(pred)
+  lista <- attr(r1, "candidates")
+  expect_error(draw(pred, previous = "nao_existe.csv"), "Not found")
+  expect_error(draw(pred, previous = r1, candidates = "nao_existe.csv"),
+               "Not found")
+  expect_error(draw(pred, previous = dplyr::select(r1, -occasion_id)),
+               "occasion_id")
+  expect_error(draw(pred, previous = r1, candidates = lista["site"]),
+               "lacks column")
+  expect_error(draw(pred, previous = r1, candidates = lista, cells = "A"),
+               "`cells` must be")
+  expect_error(combine_rounds(r1), "give `candidates`")
+
+  # ocasioes fora da lista
+  outra <- r1
+  outra$occasion_id <- paste0("x", outra$occasion_id)
+  expect_error(draw(pred, previous = outra, candidates = lista),
+               "not among the candidates")
+  expect_error(combine_rounds(outra, lista), "outside `candidates`")
+
+  # probabilidade guardada que nao bate: outro desenho
+  errada <- r1
+  errada$inclusion_prob <- 0.5
+  expect_error(draw(pred, previous = errada, candidates = lista),
+               "does not match")
+
+  # modos sem rodadas
+  rec <- r1
+  rec$sampling_mode <- "random_recordings"
+  expect_error(
+    suppressMessages(select_clips(pred, "random_recordings", previous = rec)),
+    "not available")
+  top <- suppressMessages(select_clips(pred, "top"))
+  expect_error(
+    suppressMessages(select_clips(pred, "top", previous = top, cells = r1)),
+    "for \"random_detections\"")
+})
+
+test_that("without candidates.csv, the list is rebuilt with a warning", {
+  pred <- rounds_detections(20)
+  r1 <- draw(pred)
+  expect_warning(r2 <- draw(pred, previous = r1), "No candidates.csv")
+  expect_equal(unique(r2$inclusion_prob), 4 / 20)
+})
+
+test_that("a drawn occasion without predictions now gives a warning", {
+  pred <- rounds_detections(4)
+  r1 <- draw(pred)
+  lista <- attr(r1, "candidates")
+  resto <- setdiff(lista$occasion_id, ids(r1))
+  menos <- pred[!grepl(resto[1], pred$begin_path), ]
+  avisos <- character()
+  withCallingHandlers(
+    draw(menos, previous = r1, candidates = lista),
+    warning = function(w) {
+      avisos <<- c(avisos, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    })
+  expect_true(any(grepl("no prediction now", avisos)))
+})
+
+test_that("read_validation_tables() skips missing files with candidates", {
+  pred <- rounds_detections(20)
+  r1 <- draw(pred)
+  d <- withr::local_tempdir()
+  readr::write_csv(r1, file.path(d, "a.csv"))
+  expect_warning(
+    comb <- read_validation_tables(c(file.path(d, "a.csv"),
+                                     file.path(d, "b.csv")),
+                                   candidates = attr(r1, "candidates")),
+    "Not found")
+  expect_equal(nrow(comb), nrow(r1))
+})
