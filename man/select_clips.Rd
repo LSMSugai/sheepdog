@@ -33,7 +33,8 @@ select_clips(
   seed = 2026,
   previous = NULL,
   candidates = NULL,
-  cells = NULL
+  cells = NULL,
+  inherit = FALSE
 )
 }
 \arguments{
@@ -178,6 +179,10 @@ round, as a path or a data frame. \code{NULL} looks for it in the folders of
 \item{cells}{With \code{previous}, restrict the round to these cells: a data
 frame with \code{site} and \code{species_folder} or \code{species_code}, such as the
 rows of \code{\link[=review_support]{review_support()}} with \code{diagnosis == "review more"}.}
+
+\item{inherit}{With \code{previous} of the other design, give the clips the
+verdict that the earlier review implies, so that they need no review?
+See Reusing the other design.}
 }
 \value{
 A tibble, the clip manifest without \code{status}, with the columns
@@ -256,9 +261,10 @@ cell reaches a target, makes the stopping depend on the results; see
 A study can draw both \code{"random_detections"} and \code{"random_recordings"}.
 With \code{previous} of the other design, the occasions reviewed there stay in
 the pool, so that this draw remains independent and its inclusion
-probabilities do not change; only what the earlier review already tells
-is reused, matching site, species, recording and time, so that minutes and
-files can be mixed:\tabular{llll}{
+probabilities do not change, and \code{previously_reviewed} marks the clips
+that overlap an earlier review, matching site, species, recording and
+time, so that minutes and files can be mixed. With \code{inherit = TRUE}, what
+the earlier review already tells is reused:\tabular{llll}{
    Earlier review \tab This draw \tab Inherited \tab Still to review \cr
    recording absent \tab \code{"random_detections"} \tab every prediction is negative \tab nothing \cr
    recording present \tab \code{"random_detections"} \tab nothing \tab the clips \cr
@@ -275,5 +281,12 @@ complete for its precision and thresholds.
 \code{\link[=export_occupancy_data]{export_occupancy_data()}} leaves them out: an inherited verdict is the
 same judgement as the earlier one, and exporting it would give a model two
 observations of it.
+
+\code{inherit} is \code{FALSE} by default because of that last step. The occasions
+left out are chosen by their verdict (present recordings, negative clips),
+which can bias what an occupancy model estimates from those tables. The
+overlap between two random draws is usually small, so reviewing it costs
+little; use \code{inherit = TRUE} when the tables will not go to an occupancy
+model.
 }
 

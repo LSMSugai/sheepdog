@@ -2,12 +2,14 @@
 
 - `previous` in `select_clips()` and `extract_validation_clips()` also takes
   the reviews of the other random design (`"random_detections"` and
-  `"random_recordings"`). The draw stays independent, and clips whose verdict
-  follows from the earlier review get `inherited_verdict`: an absent
-  recording makes its predictions negative, a positive prediction makes its
-  recording present. `cut_clips()` and the review app skip them,
-  `post_validation()` fills them in, and `export_occupancy_data()` leaves them
-  out, as they repeat a judgement. `export_occupancy_data()` also warns about
+  `"random_recordings"`). The draw stays independent, and
+  `previously_reviewed` marks the clips that overlap an earlier review. With
+  the new `inherit = TRUE`, clips whose verdict follows from that review get
+  `inherited_verdict`: an absent recording makes its predictions negative, a
+  positive prediction makes its recording present. `cut_clips()` and the
+  review app skip them, `post_validation()` fills them in, and
+  `export_occupancy_data()` leaves them out with a warning, as they repeat a
+  judgement and are chosen by their verdict. It also warns about
   occasions in both `validation` and `recordings_verified`, which a model
   takes as two independent reviews (#102).
 - Review rounds: `select_clips()` and `extract_validation_clips()` gain

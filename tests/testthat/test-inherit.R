@@ -11,12 +11,13 @@ rec_lista <- function() {
   data.frame(site = "A", source_audio = paste0(
     "/audio/A/", c("A_20240101_200000", "A_20240102_200000"), ".wav"))
 }
-det <- function(pred = inherit_pred(), ...) {
+det <- function(pred = inherit_pred(), ..., inherit = TRUE) {
   suppressMessages(select_clips(pred, "random_detections", threshold = 0.5,
-                                strata = "site_species", n_top = 10, ...))
+                                strata = "site_species", n_top = 10,
+                                inherit = inherit, ...))
 }
-rec <- function(pred = inherit_pred(), unit = "file", ...) {
-  suppressMessages(select_clips(pred, "random_recordings",
+rec <- function(pred = inherit_pred(), unit = "file", ..., inherit = TRUE) {
+  suppressMessages(select_clips(pred, "random_recordings", inherit = inherit,
                                 occasion_unit = unit, n_recordings_per_site = 100,
                                 recordings = rec_lista(),
                                 recording_duration = 60, ...))
@@ -35,6 +36,19 @@ test_that("an absent recording makes its predictions negative", {
   expect_true(all(m$inherited_verdict[dia1] == "negative"))
   expect_true(all(is.na(m$inherited_verdict[!dia1])))
   expect_true(all(m$source_design == "random_recordings"))
+})
+
+test_that("by default, overlaps are marked and still reviewed", {
+  r <- rec()
+  r$verdict <- "negative"
+  m <- det(previous = r, inherit = FALSE)
+  expect_true(all(m$previously_reviewed))
+  expect_true(all(m$source_design == "random_recordings"))
+  expect_true(all(is.na(m$inherited_verdict)))
+  d <- withr::local_tempdir()
+  cortado <- suppressMessages(suppressWarnings(
+    cut_clips(m, d, simulate = TRUE)))
+  expect_false(any(cortado$status == "inherited"))
 })
 
 test_that("a positive prediction makes its recording present", {
@@ -70,7 +84,7 @@ test_that("minutes and files can be mixed", {
   mm <- suppressMessages(select_clips(
     pred, "random_recordings", occasion_unit = "minute",
     n_recordings_per_site = 100, recordings = rec_lista(),
-    recording_duration = 120, previous = d))
+    recording_duration = 120, previous = d, inherit = TRUE))
   expect_true(all(mm$inherited_verdict[mm$clip_start == 60] == "positive"))
   expect_true(all(is.na(mm$inherited_verdict[mm$clip_start == 0])))
 
@@ -177,8 +191,7 @@ test_that("the export keeps each occasion where it was reviewed", {
                   verdict = "positive", inherited_verdict = NA_character_),
     dplyr::mutate(base, occasion_id = "o2", sampling_mode = "random_recordings",
                   verdict = "positive", inherited_verdict = "positive"))
-  expect_no_warning(out <- suppressMessages(
-    sheepdog:::export_validation(v, oc)))
+  expect_warning(out <- sheepdog:::export_validation(v, oc), "chosen by")
   expect_identical(out$validation$occasion_id, "o2")
   expect_identical(out$recordings_verified$occasion_id, "o1")
 

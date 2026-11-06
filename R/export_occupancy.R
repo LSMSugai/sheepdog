@@ -607,8 +607,11 @@ export_validation <- function(validation, ocasioes) {
   # ao modelo duas observacoes dele
   herdados <- is_inherited(validation)
   if (any(herdados)) {
-    message(sum(herdados), " clip(s) with an inherited verdict left out: each ",
-            "occasion goes only to the table where it was reviewed.")
+    warning(sum(herdados), " clip(s) with an inherited verdict left out, as ",
+            "they repeat a judgement. They are chosen by their verdict, which ",
+            "can bias the rates that an occupancy model estimates from these ",
+            "tables; review them (`inherit = FALSE` in select_clips()) if ",
+            "they are many.", call. = FALSE)
     validation <- validation[!herdados, ]
   }
   for (col in c("confidence", "clip_start", "clip_end", "inclusion_prob",

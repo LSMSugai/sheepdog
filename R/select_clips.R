@@ -56,9 +56,10 @@
 #' A study can draw both `"random_detections"` and `"random_recordings"`.
 #' With `previous` of the other design, the occasions reviewed there stay in
 #' the pool, so that this draw remains independent and its inclusion
-#' probabilities do not change; only what the earlier review already tells
-#' is reused, matching site, species, recording and time, so that minutes and
-#' files can be mixed:
+#' probabilities do not change, and `previously_reviewed` marks the clips
+#' that overlap an earlier review, matching site, species, recording and
+#' time, so that minutes and files can be mixed. With `inherit = TRUE`, what
+#' the earlier review already tells is reused:
 #'
 #' | Earlier review | This draw | Inherited | Still to review |
 #' | --- | --- | --- | --- |
@@ -75,6 +76,13 @@
 #' [export_occupancy_data()] leaves them out: an inherited verdict is the
 #' same judgement as the earlier one, and exporting it would give a model two
 #' observations of it.
+#'
+#' `inherit` is `FALSE` by default because of that last step. The occasions
+#' left out are chosen by their verdict (present recordings, negative clips),
+#' which can bias what an occupancy model estimates from those tables. The
+#' overlap between two random draws is usually small, so reviewing it costs
+#' little; use `inherit = TRUE` when the tables will not go to an occupancy
+#' model.
 #'
 #' @param detections Predictions, as returned by [read_selection_tables()].
 #' @param sampling_mode `"top"`, `"random_detections"` or
@@ -188,6 +196,9 @@
 #' @param cells With `previous`, restrict the round to these cells: a data
 #'   frame with `site` and `species_folder` or `species_code`, such as the
 #'   rows of [review_support()] with `diagnosis == "review more"`.
+#' @param inherit With `previous` of the other design, give the clips the
+#'   verdict that the earlier review implies, so that they need no review?
+#'   See Reusing the other design.
 #' @param seed Seed of every random draw. The global random number
 #'   generator is left as it was.
 #'
@@ -232,7 +243,8 @@ select_clips <- function(detections,
                          seed = 2026,
                          previous = NULL,
                          candidates = NULL,
-                         cells = NULL) {
+                         cells = NULL,
+                         inherit = FALSE) {
   modo    <- match.arg(sampling_mode)
   estrato1 <- resolve_strata(strata)
   rotulo1  <- paste(estrato1, collapse = " x ")
@@ -278,7 +290,8 @@ select_clips <- function(detections,
   }
   if (!is.null(outro_desenho)) {
     message("`previous`: reviews of another design, so the draw stays ",
-            "independent and only their verdicts are reused.")
+            "independent", if (inherit) " and their verdicts are reused",
+            ".")
   }
   if (!is.null(cells) && modo != "random_detections") {
     stop("`cells` is for \"random_detections\".", call. = FALSE)
@@ -642,6 +655,7 @@ select_clips <- function(detections,
                       source_design = NA_character_)
   } else {
     selecao <- inherit_verdicts(selecao, outro_desenho, modo)
+    if (!inherit) selecao$inherited_verdict <- NA_character_
     message(sum(selecao$previously_reviewed), " clip(s) overlap an earlier ",
             "review; ", sum(!is.na(selecao$inherited_verdict)), " inherit its ",
             "verdict and need no review.")
