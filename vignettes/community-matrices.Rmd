@@ -23,6 +23,10 @@ runs that stage on the example data shipped with the package, and then uses
 the matrices in a distance-based ordination (PCoA) and in a model-based
 ordination and test with generalised linear latent variable models (GLLVM).
 
+![From the nightly history to the matrices and their analysis.](figures/schematic_matrix.png){width=100%}
+
+![Stage 3 in order, with the occupancy export as the other way out of the histories.](figures/stage3_community.png){width=100%}
+
 ```{r}
 library(sheepdog)
 ```
